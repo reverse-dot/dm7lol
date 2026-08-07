@@ -169,6 +169,10 @@
             <span id="navCooldownTimer">6h</span>
           </div>
         </div>
+        <button id="btnResetCastigos"
+          class="hidden text-loss border border-loss/30 hover:bg-loss/10 text-[12px] font-bold px-3 py-2 rounded-lg transition-colors">
+          🗑️ Resetear castigos
+        </button>
         <button id="btnLogout"
           class="text-text-dim hover:text-white text-[12px] font-bold px-3 py-2 rounded-lg hover:bg-panel transition-colors">
           Salir
@@ -193,23 +197,51 @@
     </div>
 
     <div class="space-y-4">
-      <div>
-        <label class="text-[11px] font-bold text-text-dim uppercase tracking-wider mb-1.5 block">Tu nombre</label>
-        <select id="loginPlayer"
-          class="w-full bg-bg border border-panel-border rounded-xl px-4 py-3 text-white text-[14px] font-bold outline-none focus:border-accent/50 transition-colors appearance-none cursor-pointer">
-          <option value="">— Selecciona tu jugador —</option>
-        </select>
+      <div id="playerLoginFields" class="space-y-4">
+        <div>
+          <label class="text-[11px] font-bold text-text-dim uppercase tracking-wider mb-1.5 block">Tu nombre</label>
+          <select id="loginPlayer"
+            class="w-full bg-bg border border-panel-border rounded-xl px-4 py-3 text-white text-[14px] font-bold outline-none focus:border-accent/50 transition-colors appearance-none cursor-pointer">
+            <option value="">— Selecciona tu jugador —</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[11px] font-bold text-text-dim uppercase tracking-wider mb-1.5 block">Contraseña</label>
+          <input id="loginPassword" type="password" placeholder="••••••••"
+            class="w-full bg-bg border border-panel-border rounded-xl px-4 py-3 text-white text-[14px] outline-none focus:border-accent/50 transition-colors placeholder:text-text-dimmer">
+        </div>
+        <button id="btnLogin"
+          class="w-full bg-accent text-bg font-extrabold text-[14px] py-3 rounded-xl hover:bg-accent-dim transition-colors">
+          Entrar
+        </button>
+        <button id="btnShowAdminLogin" type="button"
+          class="w-full text-text-dimmer hover:text-text-dim text-[11px] font-bold text-center transition-colors">
+          Acceso admin →
+        </button>
       </div>
-      <div>
-        <label class="text-[11px] font-bold text-text-dim uppercase tracking-wider mb-1.5 block">Contraseña</label>
-        <input id="loginPassword" type="password" placeholder="••••••••"
-          class="w-full bg-bg border border-panel-border rounded-xl px-4 py-3 text-white text-[14px] outline-none focus:border-accent/50 transition-colors placeholder:text-text-dimmer">
+
+      <div id="adminLoginFields" class="hidden space-y-4">
+        <div>
+          <label class="text-[11px] font-bold text-text-dim uppercase tracking-wider mb-1.5 block">Correo admin</label>
+          <input id="adminEmail" type="email" placeholder="admin@tudominio.com" autocomplete="off"
+            class="w-full bg-bg border border-panel-border rounded-xl px-4 py-3 text-white text-[14px] outline-none focus:border-accent/50 transition-colors placeholder:text-text-dimmer">
+        </div>
+        <div>
+          <label class="text-[11px] font-bold text-text-dim uppercase tracking-wider mb-1.5 block">Contraseña admin</label>
+          <input id="adminPassword" type="password" placeholder="••••••••" autocomplete="off"
+            class="w-full bg-bg border border-panel-border rounded-xl px-4 py-3 text-white text-[14px] outline-none focus:border-accent/50 transition-colors placeholder:text-text-dimmer">
+        </div>
+        <button id="btnAdminLogin"
+          class="w-full bg-loss text-white font-extrabold text-[14px] py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40">
+          Entrar como admin
+        </button>
+        <button id="btnShowPlayerLogin" type="button"
+          class="w-full text-text-dimmer hover:text-text-dim text-[11px] font-bold text-center transition-colors">
+          ← Volver a login de jugador
+        </button>
       </div>
+
       <p id="loginError" class="text-loss text-[12px] font-bold hidden">Contraseña incorrecta. Intentá de nuevo.</p>
-      <button id="btnLogin"
-        class="w-full bg-accent text-bg font-extrabold text-[14px] py-3 rounded-xl hover:bg-accent-dim transition-colors mt-2">
-        Entrar
-      </button>
     </div>
   </div>
 </div>
@@ -245,7 +277,7 @@
         Confirmar
       </button>
     </div>
-    <p class="text-text-dimmer text-[11px] text-center mt-3">El castigo quedará visible para todos durante 6 horas.</p>
+    <p class="text-text-dimmer text-[11px] text-center mt-3">El castigo queda pendiente hasta que el jugador lo confirme con el check — recién ahí arrancan las 6 horas.</p>
   </div>
 </div>
 
@@ -322,9 +354,10 @@
 
 </div>
 
-<!-- Firebase (compat SDK para Firestore) -->
+<!-- Firebase (compat SDK para Firestore + Auth del admin) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
 <!-- Scripts externos -->
 <script src="config/firebase.js"></script>

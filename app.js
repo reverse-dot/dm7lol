@@ -22,9 +22,10 @@ const PUNISHMENTS = [
 const COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6 horas
 
 /* ============================================================
-   FIREBASE — inicialización
+   FIREBASE — inicialización (Firestore + Auth para el admin)
    ============================================================ */
 let db = null;
+let auth = null;
 
 function initFirebase() {
   try {
@@ -35,6 +36,7 @@ function initFirebase() {
     }
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
+    if (firebase.auth) auth = firebase.auth();
     return true;
   } catch(e) {
     console.warn("Firebase no disponible:", e.message);
@@ -42,21 +44,56 @@ function initFirebase() {
   }
 }
 
-/* Cache local de castigos (fallback sin Firebase) */
-let localPunishments = {}; // { targetName: { punishment, senderName, sentAt } }
+/* ============================================================
+   CASTIGOS — modelo de datos
+   Cada doc (ID = targetName, así solo hay 1 castigo por persona):
+   {
+     targetName, senderName, punishment,
+     sentAt: cuándo se tiró el castigo (rige el cooldown del que envía),
+     status: "pending" | "active",
+       - "pending": el que lo recibió todavía no clickeó el check.
+                    No tiene límite de tiempo, bloquea indefinidamente
+                    hasta que lo confirme.
+       - "active":  el que lo recibió ya confirmó, empezó a correr
+                    el timer de 6 horas (startedAt).
+     startedAt: cuándo se confirmó el castigo (null mientras está pending)
+   }
+   ============================================================ */
+
+/* Cache local (fallback si Firebase no está configurado) */
+let localPunishments = {}; // { targetName: { punishment, senderName, sentAt, status, startedAt } }
+
+function isPunishmentEffective(r, now) {
+  if (!r) return false;
+  if (r.status === "pending") return true; // sin límite hasta que confirmen
+  if (r.status === "active" && r.startedAt) return (now - r.startedAt.getTime()) < COOLDOWN_MS;
+  return false;
+}
 
 async function loadPunishments() {
-  if (!db) return localPunishments;
+  const now = Date.now();
+  if (!db) {
+    const result = {};
+    for (const [target, r] of Object.entries(localPunishments)) {
+      if (isPunishmentEffective(r, now)) result[target] = r;
+    }
+    return result;
+  }
   try {
-    const now = Date.now();
-    const cutoff = new Date(now - COOLDOWN_MS);
-    const snap = await db.collection("punishments")
-      .where("sentAt", ">", cutoff)
-      .get();
+    // Traemos toda la colección: es chica (1 doc por jugador activo) y así
+    // evitamos tener que crear índices compuestos en Firestore.
+    const snap = await db.collection("punishments").get();
     const result = {};
     snap.forEach(doc => {
       const d = doc.data();
-      result[d.targetName] = { punishment: d.punishment, senderName: d.senderName, sentAt: d.sentAt.toDate() };
+      const r = {
+        punishment: d.punishment,
+        senderName: d.senderName,
+        sentAt: d.sentAt ? d.sentAt.toDate() : null,
+        status: d.status || "active", // compatibilidad con datos viejos
+        startedAt: d.startedAt ? d.startedAt.toDate() : null,
+      };
+      if (isPunishmentEffective(r, now)) result[d.targetName] = r;
     });
     return result;
   } catch(e) {
@@ -66,18 +103,43 @@ async function loadPunishments() {
 }
 
 async function savePunishment(targetName, senderName, punishment) {
-  const record = { punishment, senderName, sentAt: new Date() };
+  const record = { punishment, senderName, sentAt: new Date(), status: "pending", startedAt: null };
   localPunishments[targetName] = record;
   if (!db) return;
   try {
-    // Usa targetName como doc ID para que solo haya un castigo activo por persona
+    // Usa targetName como doc ID para que solo haya un castigo activo por persona.
+    // set() sobrescribe cualquier castigo viejo/expirado que hubiera para ese target.
     await db.collection("punishments").doc(targetName).set({
       targetName, senderName,
       punishment,
       sentAt: firebase.firestore.Timestamp.fromDate(record.sentAt),
+      status: "pending",
+      startedAt: null,
     });
   } catch(e) {
     console.error("Error guardando castigo:", e);
+    showToast("❌ No se pudo guardar el castigo. Intenta de nuevo.", true);
+  }
+}
+
+/* El que RECIBIÓ el castigo clickea "completado" → arranca el timer de 6h */
+async function markPunishmentComplete(targetName) {
+  const now = new Date();
+  if (localPunishments[targetName]) {
+    localPunishments[targetName].status = "active";
+    localPunishments[targetName].startedAt = now;
+  }
+  if (!db) return true;
+  try {
+    await db.collection("punishments").doc(targetName).update({
+      status: "active",
+      startedAt: firebase.firestore.Timestamp.fromDate(now),
+    });
+    return true;
+  } catch(e) {
+    console.error("Error confirmando castigo:", e);
+    showToast("❌ No se pudo confirmar el castigo. Intenta de nuevo.", true);
+    return false;
   }
 }
 
@@ -85,31 +147,59 @@ async function getSenderCooldown(senderName) {
   if (!db) {
     // En local: buscar si este sender tiene algún castigo reciente
     return Object.values(localPunishments).find(
-      r => r.senderName === senderName && (Date.now() - r.sentAt.getTime()) < COOLDOWN_MS
+      r => r.senderName === senderName && r.sentAt && (Date.now() - r.sentAt.getTime()) < COOLDOWN_MS
     ) || null;
   }
   try {
-    const cutoff = new Date(Date.now() - COOLDOWN_MS);
+    // Consulta simple por igualdad (no requiere índice compuesto).
     const snap = await db.collection("punishments")
       .where("senderName", "==", senderName)
-      .where("sentAt", ">", cutoff)
-      .limit(1)
       .get();
-    if (snap.empty) return null;
-    const d = snap.docs[0].data();
-    return { sentAt: d.sentAt.toDate() };
+    let latest = null;
+    snap.forEach(doc => {
+      const d = doc.data();
+      if (!d.sentAt) return;
+      const sentAt = d.sentAt.toDate();
+      if ((Date.now() - sentAt.getTime()) < COOLDOWN_MS) {
+        if (!latest || sentAt > latest) latest = sentAt;
+      }
+    });
+    return latest ? { sentAt: latest } : null;
   } catch(e) {
+    console.error("Error verificando cooldown:", e);
     return null;
   }
 }
 
 /* ============================================================
-   AUTH — login simple
+   ADMIN — reset de todos los castigos
+   Protegido por Firebase Authentication + reglas de Firestore
+   (ver SETUP_CASTIGOS.md). El botón solo aparece si currentUser.isAdmin.
    ============================================================ */
-let currentUser = null; // { player: "X1no" }
+async function resetAllPunishments() {
+  if (!currentUser || !currentUser.isAdmin) return false;
+  localPunishments = {};
+  if (!db) return true;
+  try {
+    const snap = await db.collection("punishments").get();
+    const batch = db.batch();
+    snap.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    return true;
+  } catch(e) {
+    console.error("Error reseteando castigos:", e);
+    showToast("❌ No se pudo resetear. ¿Tu cuenta admin tiene permiso en las reglas de Firestore?", true);
+    return false;
+  }
+}
+
+/* ============================================================
+   AUTH — login simple de jugadores + login de admin (Firebase Auth)
+   ============================================================ */
+let currentUser = null; // { player: "X1no" } o { player:"Admin", isAdmin:true, email }
 
 function authInit() {
-  // Cargar sesión guardada
+  // Cargar sesión de JUGADOR guardada (login simple, no es Firebase Auth)
   try {
     const saved = sessionStorage.getItem("sq_user");
     if (saved) {
@@ -139,6 +229,40 @@ function authInit() {
     if (e.key === "Enter") doLogin();
   });
   document.getElementById("btnLogin").addEventListener("click", doLogin);
+
+  // --- Toggle entre login de jugador y login de admin ---
+  document.getElementById("btnShowAdminLogin").addEventListener("click", () => {
+    document.getElementById("playerLoginFields").classList.add("hidden");
+    document.getElementById("adminLoginFields").classList.remove("hidden");
+  });
+  document.getElementById("btnShowPlayerLogin").addEventListener("click", () => {
+    document.getElementById("adminLoginFields").classList.add("hidden");
+    document.getElementById("playerLoginFields").classList.remove("hidden");
+  });
+  document.getElementById("adminPassword").addEventListener("keydown", e => {
+    if (e.key === "Enter") doAdminLogin();
+  });
+  document.getElementById("btnAdminLogin").addEventListener("click", doAdminLogin);
+
+  // --- Botón de reset (solo visible para admin) ---
+  document.getElementById("btnResetCastigos").addEventListener("click", doResetCastigos);
+
+  // Restaurar sesión de ADMIN si Firebase Auth ya tiene una sesión activa
+  // (Firebase Auth persiste la sesión sola, por eso no usamos sessionStorage acá)
+  if (auth) {
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = { player: "Admin", isAdmin: true, email: user.email };
+        sessionStorage.removeItem("sq_user"); // el admin no es un jugador
+        updateAuthUI();
+        renderTable();
+      } else if (currentUser && currentUser.isAdmin) {
+        currentUser = null;
+        updateAuthUI();
+        renderTable();
+      }
+    });
+  }
 }
 
 function doLogin() {
@@ -152,6 +276,7 @@ function doLogin() {
   const match = users.find(u => u.player === player && u.password === pwd);
 
   if (!match) {
+    errEl.textContent = "Contraseña incorrecta. Intentá de nuevo.";
     errEl.classList.remove("hidden");
     const modal = document.querySelector("#loginModal > div");
     modal.classList.add("shake");
@@ -168,9 +293,46 @@ function doLogin() {
   renderTable(); // re-render para mostrar botones de castigo
 }
 
+async function doAdminLogin() {
+  const email = document.getElementById("adminEmail").value.trim();
+  const pwd   = document.getElementById("adminPassword").value;
+  const errEl = document.getElementById("loginError");
+
+  if (!auth) {
+    errEl.textContent = "Firebase Auth no está configurado (ver SETUP_CASTIGOS.md).";
+    errEl.classList.remove("hidden");
+    return;
+  }
+  if (!email || !pwd) {
+    errEl.textContent = "Completá el correo y la contraseña de admin.";
+    errEl.classList.remove("hidden");
+    return;
+  }
+
+  const btn = document.getElementById("btnAdminLogin");
+  btn.disabled = true; btn.textContent = "Verificando…";
+  try {
+    await auth.signInWithEmailAndPassword(email, pwd);
+    errEl.classList.add("hidden");
+    closeModal("loginModal");
+    showToast("🔑 Sesión de administrador iniciada.");
+    // updateAuthUI() y renderTable() se disparan solos vía onAuthStateChanged
+  } catch(e) {
+    errEl.textContent = "Credenciales de admin incorrectas.";
+    errEl.classList.remove("hidden");
+    const modal = document.querySelector("#loginModal > div");
+    modal.classList.add("shake");
+    setTimeout(() => modal.classList.remove("shake"), 400);
+  } finally {
+    btn.disabled = false; btn.textContent = "Entrar como admin";
+  }
+}
+
 function logout() {
+  const wasAdmin = currentUser && currentUser.isAdmin;
   currentUser = null;
   sessionStorage.removeItem("sq_user");
+  if (wasAdmin && auth) auth.signOut();
   updateAuthUI();
   renderTable();
 }
@@ -178,20 +340,43 @@ function logout() {
 function updateAuthUI() {
   const loggedOut = document.getElementById("authLoggedOut");
   const loggedIn  = document.getElementById("authLoggedIn");
+  const resetBtn  = document.getElementById("btnResetCastigos");
   if (currentUser) {
     loggedOut.classList.add("hidden");
     loggedIn.classList.remove("hidden");
-    document.getElementById("navUserName").textContent = currentUser.player;
-    document.getElementById("navUserInitial").textContent = currentUser.player[0].toUpperCase();
+    document.getElementById("navUserName").textContent = currentUser.isAdmin ? "Admin" : currentUser.player;
+    document.getElementById("navUserInitial").textContent = (currentUser.isAdmin ? "A" : currentUser.player[0]).toUpperCase();
+    resetBtn.classList.toggle("hidden", !currentUser.isAdmin);
     updateNavCooldown();
   } else {
     loggedOut.classList.remove("hidden");
     loggedIn.classList.add("hidden");
+    resetBtn.classList.add("hidden");
+  }
+}
+
+async function doResetCastigos() {
+  if (!currentUser || !currentUser.isAdmin) return;
+  const ok = window.confirm("¿Seguro que querés borrar TODOS los castigos activos de todos los jugadores? Esta acción no se puede deshacer.");
+  if (!ok) return;
+
+  const btn = document.getElementById("btnResetCastigos");
+  btn.disabled = true; btn.textContent = "Reseteando…";
+  const success = await resetAllPunishments();
+  btn.disabled = false; btn.textContent = "🗑️ Resetear castigos";
+
+  if (success) {
+    activePunishments = {};
+    showToast("🧹 Todos los castigos fueron reseteados.");
+    renderTable();
   }
 }
 
 async function updateNavCooldown() {
-  if (!currentUser) return;
+  if (!currentUser || currentUser.isAdmin) {
+    document.getElementById("navCooldownBadge").classList.add("hidden");
+    return;
+  }
   const record = await getSenderCooldown(currentUser.player);
   const badge  = document.getElementById("navCooldownBadge");
   const timer  = document.getElementById("navCooldownTimer");
@@ -214,6 +399,7 @@ let selectedPunishment = null;
 let activePunishments  = {};
 
 function openPunishModal(player) {
+  if (!currentUser || currentUser.isAdmin) return; // el admin no juega, no tira castigos
   punishTarget = player;
   selectedPunishment = null;
   document.getElementById("punishTargetName").textContent   = player.summonerName;
@@ -379,12 +565,47 @@ function pad2(n){ return n.toString().padStart(2,"0"); }
 function renderPunishmentCell(player) {
   const pname = player.summonerName;
   const record = activePunishments[pname];
-  const isMe = currentUser && currentUser.player === pname;
+  const isMe = currentUser && !currentUser.isAdmin && currentUser.player === pname;
 
-  // Si el jugador tiene un castigo activo → mostrar icono con tooltip
   if (record) {
     const p = record.punishment;
-    const remaining = COOLDOWN_MS - (Date.now() - new Date(record.sentAt).getTime());
+
+    // Castigo PENDIENTE: el que lo recibió todavía no confirmó, el timer no corrió
+    if (record.status === "pending") {
+      // Si soy yo el que lo recibió → botón para marcar como completado
+      if (isMe) {
+        return `
+        <button class="complete-btn flex items-center gap-1.5 bg-win/10 border border-win/30
+          text-win hover:bg-win/20 font-bold text-[11px] px-2.5 py-1.5 rounded-lg transition-colors"
+          data-player="${pname}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+          Marcar completado
+        </button>`;
+      }
+      // Si es otra persona viendo la tabla
+      return `
+      <div class="punishment-wrap">
+        <div class="flex items-center gap-1.5">
+          <span class="text-2xl cursor-default">${p.icon}</span>
+          <div class="cooldown-pill" style="background:rgba(255,201,61,.12);border-color:rgba(255,201,61,.25);color:#ffc93d;">
+            pendiente
+          </div>
+        </div>
+        <div class="punishment-tooltip">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xl">${p.icon}</span>
+            <span class="font-extrabold text-white text-sm">${p.name}</span>
+          </div>
+          <p class="text-text-dim text-xs leading-relaxed mb-2">${p.desc}</p>
+          <div class="text-[10px] text-text-dimmer border-t border-[#2a2a35] pt-2 mt-1">
+            Enviado por <span class="text-accent font-bold">${record.senderName}</span> · esperando que ${pname} confirme
+          </div>
+        </div>
+      </div>`;
+    }
+
+    // Castigo ACTIVO: ya confirmado, timer de 6h corriendo
+    const remaining = COOLDOWN_MS - (Date.now() - new Date(record.startedAt).getTime());
     const h = Math.floor(remaining/3600000);
     const m = Math.floor((remaining%3600000)/60000);
     const timeStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
@@ -410,8 +631,8 @@ function renderPunishmentCell(player) {
     </div>`;
   }
 
-  // Si no hay castigo: mostrar botón solo si hay usuario logueado y no es él mismo
-  if (currentUser && !isMe) {
+  // Si no hay castigo: mostrar botón solo si hay un jugador logueado (no admin) y no es él mismo
+  if (currentUser && !currentUser.isAdmin && !isMe) {
     return `
     <button class="punish-btn flex items-center gap-1.5 bg-panel border border-panel-border
       text-text-dim hover:border-loss/40 hover:text-loss font-bold text-[11px] px-2.5 py-1.5 rounded-lg transition-colors"
@@ -421,7 +642,7 @@ function renderPunishmentCell(player) {
     </button>`;
   }
 
-  // Sin login o es el propio jugador
+  // Sin login, admin, o es el propio jugador
   return `<span class="text-text-dimmer text-xs">—</span>`;
 }
 
@@ -514,6 +735,26 @@ function bindControls() {
     const pname = btn.dataset.player;
     const player = state.players.find(p=>p.summonerName===pname);
     if (player) openPunishModal(player);
+  });
+
+  // Delegación de eventos para el botón "Marcar completado" (arranca el timer de 6h)
+  document.getElementById("tableBody").addEventListener("click", async e=>{
+    const btn = e.target.closest(".complete-btn");
+    if (!btn) return;
+    const pname = btn.dataset.player;
+    if (!currentUser || currentUser.player !== pname) return; // solo el propio jugador puede confirmar
+
+    btn.disabled = true;
+    btn.textContent = "Confirmando…";
+    const ok = await markPunishmentComplete(pname);
+    if (ok) {
+      activePunishments = await loadPunishments();
+      showToast("✅ Castigo confirmado, ahora corren las 6 horas.");
+      renderTable();
+    } else {
+      btn.disabled = false;
+      btn.textContent = "Marcar completado";
+    }
   });
 }
 

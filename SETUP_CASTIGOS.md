@@ -26,7 +26,8 @@ Sin Firebase, los castigos solo duran mientras el usuario tiene la página abier
 1. Ve a https://console.firebase.google.com
 2. Crea un nuevo proyecto (gratis)
 3. Ve a **Firestore Database** → Crear base de datos → modo producción
-4. En **Reglas** de Firestore, pega esto:
+4. En **Reglas** de Firestore, pega esto (más abajo en la sección de Admin
+   hay una versión actualizada que además protege el botón de reset):
 
 ```
 rules_version = '2';
@@ -84,7 +85,71 @@ Puedes modificar la lista en `app.js` → array `PUNISHMENTS`.
 
 ## Reglas del sistema
 
-- Cada jugador puede **recibir máximo 1 castigo activo** (dura 6 horas)
-- Cada jugador puede **enviar máximo 1 castigo** cada 6 horas
-- Los castigos son **visibles para todos** con hover sobre el icono
-- El hover muestra: icono, nombre del castigo, descripción, quién lo envió y cuánto tiempo queda
+- Cuando alguien tira un castigo, este queda **"pendiente"**: se muestra en la
+  tabla pero **el timer de 6 horas todavía no corre**.
+- El jugador que **recibió** el castigo tiene que apretar el botón
+  **"Marcar completado"** (aparece en su propia fila) recién ahí arranca el
+  timer de 6 horas.
+- Mientras el castigo está pendiente o activo (dentro de las 6h), esa persona
+  **no puede recibir otro castigo de nadie más**.
+- Cada jugador puede **enviar máximo 1 castigo** cada 6 horas (contado desde
+  que lo envía, sin importar si el otro lo confirmó o no).
+- Los castigos son **visibles para todos** con hover sobre el icono.
+- El hover muestra: icono, nombre del castigo, descripción, quién lo envió y
+  (si ya está activo) cuánto tiempo queda.
+
+---
+
+## 4. Panel de Administrador (resetear todos los castigos)
+
+Se agregó un usuario **admin** que puede resetear todos los castigos con un
+botón, sin esperar a que se cumplan las 6 horas. A diferencia de los
+jugadores (que solo tienen una contraseña chequeada en el JavaScript, algo
+fácil de saltarse desde la consola del navegador), el admin usa
+**Firebase Authentication real**, así que la contraseña se verifica del lado
+del servidor de Google y **las reglas de Firestore pueden exigir esa sesión**
+para permitir el borrado. Nadie que no tenga la contraseña del admin puede
+ejecutar el reset, ni siquiera abriendo la consola del navegador.
+
+### Pasos para crearlo:
+
+1. En Firebase Console, ve a **Authentication** → pestaña **Sign-in method**
+   → habilita el proveedor **Correo electrónico/contraseña**.
+2. Ve a la pestaña **Users** → **Add user** → cargá un email (puede ser
+   cualquiera, ej. `admin@tuservidor.com`) y una **contraseña muy larga y
+   compleja** (Firebase exige mínimo 6 caracteres, pero usa algo tipo
+   generador de contraseñas de 20+ caracteres). Guardala en un lugar seguro,
+   es la única forma de resetear los castigos.
+3. Copiá el **User UID** que Firebase le asignó a ese usuario (aparece en la
+   lista de Users, es un string largo tipo `aB3xQ...`).
+4. Ve a **Firestore Database** → **Reglas** y reemplaza las reglas por estas
+   (cambiá `PEGA_AQUI_EL_UID_DEL_ADMIN` por el UID que copiaste):
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /punishments/{doc} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if request.auth != null
+                    && request.auth.uid == "PEGA_AQUI_EL_UID_DEL_ADMIN";
+    }
+  }
+}
+```
+
+5. Listo. En la web, hacé click en **Iniciar sesión** → **Acceso admin →** y
+   entrá con el email y contraseña que creaste en el paso 2. Vas a ver un
+   botón rojo **"🗑️ Resetear castigos"** en la navbar que borra todos los
+   castigos (pendientes y activos) de todos los jugadores.
+
+### Nota sobre seguridad
+
+Los jugadores normales **no** usan Firebase Authentication (siguen con el
+login simple por contraseña de `config/users.js`), así que técnicamente
+alguien muy insistente podría escribir castigos directamente desde la
+consola del navegador sin pasar por el login. Eso queda fuera del alcance de
+este proyecto (es un juego entre amigos, no un sistema con datos sensibles),
+pero el **reset del admin sí queda completamente protegido**, que era lo
+pedido: solo quien tenga la contraseña de admin puede borrar todo.
