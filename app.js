@@ -627,7 +627,7 @@ function renderPunishmentCell(player) {
           <span class="font-extrabold text-white text-sm">${p.name}</span>
         </div>
         <p class="text-text-dim text-xs leading-relaxed mb-2">${p.desc}</p>
-        <div class="text-[10px] text-text-dimmer border-t border-[#2a2a35] pt-2 mt-1">
+        <div class="text-[15px] text-text-dimmer border-t border-[#2a2a35] pt-2 mt-1">
           Enviado por <span class="text-accent font-bold">${record.senderName}</span> · expira en ${timeStr}
         </div>
       </div>
@@ -638,7 +638,7 @@ function renderPunishmentCell(player) {
   if (currentUser && !currentUser.isAdmin && !isMe) {
     return `
     <button class="punish-btn flex items-center gap-1.5 bg-panel border border-panel-border
-      text-text-dim hover:border-loss/40 hover:text-loss font-bold text-[11px] px-2.5 py-1.5 rounded-lg transition-colors"
+      text-text-dim hover:border-loss/40 hover:text-loss font-bold text-[15px] px-2.5 py-1.5 rounded-lg transition-colors"
       data-player="${pname}">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
       Castigar
