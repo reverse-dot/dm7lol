@@ -740,6 +740,71 @@ function bindControls() {
     if (player) openPunishModal(player);
   });
 
+  initPunishmentTooltips();
+}
+
+/* ============================================================
+   TOOLTIP DE CASTIGO — posicionado con JS (position:fixed) para
+   que nunca quede recortado por el overflow del contenedor de la
+   tabla, y para que siempre se vea completo aunque esté cerca del
+   borde de la pantalla.
+   ============================================================ */
+function initPunishmentTooltips() {
+  const tableBody = document.getElementById("tableBody");
+
+  tableBody.addEventListener("mouseover", e => {
+    const wrap = e.target.closest(".punishment-wrap");
+    if (!wrap) return;
+    showPunishmentTooltip(wrap);
+  });
+
+  tableBody.addEventListener("mouseout", e => {
+    const wrap = e.target.closest(".punishment-wrap");
+    if (!wrap) return;
+    if (wrap.contains(e.relatedTarget)) return; // seguimos dentro del mismo wrap
+    hidePunishmentTooltip(wrap);
+  });
+
+  // Si se hace scroll en la tabla (o en la ventana), ocultamos cualquier
+  // tooltip abierto para que no quede flotando en una posición vieja.
+  const scrollContainer = document.querySelector(".table-scroll");
+  const hideAll = () => document.querySelectorAll(".punishment-tooltip").forEach(t => t.style.display = "none");
+  if (scrollContainer) scrollContainer.addEventListener("scroll", hideAll);
+  window.addEventListener("scroll", hideAll, true);
+}
+
+function showPunishmentTooltip(wrap) {
+  const tooltip = wrap.querySelector(".punishment-tooltip");
+  if (!tooltip) return;
+
+  tooltip.style.display = "block";
+  tooltip.classList.remove("tooltip-above", "tooltip-below");
+
+  const margin = 10;
+  const wrapRect = wrap.getBoundingClientRect();
+  const ttRect = tooltip.getBoundingClientRect();
+
+  // Vertical: preferimos arriba del ícono; si no entra, la mostramos abajo.
+  let top;
+  if (wrapRect.top - ttRect.height - margin > 0) {
+    top = wrapRect.top - ttRect.height - margin;
+    tooltip.classList.add("tooltip-above");
+  } else {
+    top = wrapRect.bottom + margin;
+    tooltip.classList.add("tooltip-below");
+  }
+
+  // Horizontal: centrada en el ícono, pero sin salirse de la pantalla.
+  let left = wrapRect.left + wrapRect.width / 2 - ttRect.width / 2;
+  left = Math.max(margin, Math.min(left, window.innerWidth - ttRect.width - margin));
+
+  tooltip.style.top  = `${top}px`;
+  tooltip.style.left = `${left}px`;
+}
+
+function hidePunishmentTooltip(wrap) {
+  const tooltip = wrap.querySelector(".punishment-tooltip");
+  if (tooltip) tooltip.style.display = "none";
 }
 
 function getFiltered() {
