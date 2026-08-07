@@ -255,9 +255,9 @@ html,body{
 /* Barra V/D del podio: mismos dos segmentos separados que la tabla,
    uno para victorias y otro para derrotas, cada uno con su color. */
 .wl-bar{
-  height: 4px;
+  height: 6px;
   display:flex;
-  gap: 3px;
+  gap: 4px;
   margin-top: 4px;
 }
 .wl-bar .w,
