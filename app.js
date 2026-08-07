@@ -56,10 +56,66 @@
     icon: "assets/punishments/pato.webp",
     name: "Runa Clasicarda",
     desc: "No puedes equiparte la runa clave principal de tu campeón."
+  },
+  {
+    id: 9,
+    icon: "🔀",
+    name: "Autofill",
+    desc: "Se sortea un campeón al azar entre 25. Debes jugar ese campeón en tu próxima partida.",
+    isChampionRoulette: true
   }
 ];
 
 const COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6 horas
+
+/* ============================================================
+   AUTOFILL — mini ruleta de campeones de LoL
+   Se dispara cuando el castigo sorteado es "Autofill". Usa la
+   Data Dragon API (CDN oficial de Riot) solo para las imágenes,
+   no hace falta API key.
+   ============================================================ */
+const CHAMPIONS = [
+  { id: "Ahri",        name: "Ahri" },
+  { id: "Akali",       name: "Akali" },
+  { id: "Amumu",       name: "Amumu" },
+  { id: "Ashe",        name: "Ashe" },
+  { id: "Blitzcrank",  name: "Blitzcrank" },
+  { id: "Caitlyn",     name: "Caitlyn" },
+  { id: "Darius",      name: "Darius" },
+  { id: "Diana",       name: "Diana" },
+  { id: "Draven",      name: "Draven" },
+  { id: "Ezreal",      name: "Ezreal" },
+  { id: "Fiora",       name: "Fiora" },
+  { id: "Garen",       name: "Garen" },
+  { id: "Irelia",      name: "Irelia" },
+  { id: "Jax",         name: "Jax" },
+  { id: "Jinx",        name: "Jinx" },
+  { id: "Katarina",    name: "Katarina" },
+  { id: "LeeSin",      name: "Lee Sin" },
+  { id: "Lux",         name: "Lux" },
+  { id: "MissFortune", name: "Miss Fortune" },
+  { id: "Riven",       name: "Riven" },
+  { id: "Thresh",      name: "Thresh" },
+  { id: "Tristana",    name: "Tristana" },
+  { id: "Vayne",       name: "Vayne" },
+  { id: "Yasuo",       name: "Yasuo" },
+  { id: "Zed",         name: "Zed" },
+];
+
+// Versión de Data Dragon usada para las imágenes de campeones.
+// Se refresca al cargar la página; si el fetch falla (sin internet,
+// bloqueado, etc.) se usa este valor como respaldo.
+let ddragonVersion = "14.23.1";
+function loadDDragonVersion() {
+  fetch("https://ddragon.leagueoflegends.com/api/versions.json")
+    .then(r => r.json())
+    .then(list => { if (Array.isArray(list) && list[0]) ddragonVersion = list[0]; })
+    .catch(() => { /* nos quedamos con el fallback */ });
+}
+
+function champIconUrl(championId) {
+  return `https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/img/champion/${championId}.png`;
+}
 
 /* ============================================================
    FIREBASE — inicialización (Firestore + Auth para el admin)
@@ -469,10 +525,20 @@ async function beginPunishRoulette() {
   runRouletteAnimation();
 }
 
+/* Muestra un emoji/texto o una imagen (campeón) en el resultado de la ruleta. */
+function setResultIcon(value, isImage = false) {
+  const iconEl = document.getElementById("punishResultIcon");
+  if (isImage) {
+    iconEl.innerHTML = `<img src="${value}" alt="" class="w-16 h-16 rounded-lg object-cover mx-auto border-2 border-accent" onerror="this.style.opacity='0'">`;
+  } else {
+    iconEl.innerHTML = "";
+    iconEl.textContent = value;
+  }
+}
+
 /* Animación tipo ruleta: 10 segundos mostrando castigos al azar, cada vez
    más lento hacia el final, hasta que se frena en el castigo definitivo. */
 function runRouletteAnimation() {
-  const iconEl = document.getElementById("punishResultIcon");
   const nameEl = document.getElementById("punishResultName");
   const descEl = document.getElementById("punishResultDesc");
   descEl.textContent = "Sorteando entre todos los castigos…";
@@ -483,7 +549,7 @@ function runRouletteAnimation() {
   function spin() {
     const elapsed = Date.now() - start;
     const p = PUNISHMENTS[Math.floor(Math.random() * PUNISHMENTS.length)];
-    iconEl.textContent = p.icon;
+    setResultIcon(p.icon);
     nameEl.textContent = p.name;
 
     if (elapsed >= TOTAL_MS) {
@@ -500,21 +566,66 @@ function runRouletteAnimation() {
   spin();
 }
 
+/* Segunda ruleta, solo para el castigo "Autofill": gira 6 segundos entre
+   los 25 campeones (mostrando su ícono real vía Data Dragon) hasta frenar
+   en uno al azar. Devuelve el campeón elegido. */
+function runChampionRouletteAnimation() {
+  return new Promise(resolve => {
+    const nameEl = document.getElementById("punishResultName");
+    const descEl = document.getElementById("punishResultDesc");
+    descEl.textContent = "Sorteando el campeón que te toca jugar…";
+
+    const TOTAL_MS = 6000;
+    const start = Date.now();
+
+    function spin() {
+      const elapsed = Date.now() - start;
+      const c = CHAMPIONS[Math.floor(Math.random() * CHAMPIONS.length)];
+      setResultIcon(champIconUrl(c.id), true);
+      nameEl.textContent = c.name;
+
+      if (elapsed >= TOTAL_MS) {
+        resolve(c);
+        return;
+      }
+      const delay = elapsed > TOTAL_MS - 1500 ? 180
+                  : elapsed > TOTAL_MS - 3000 ? 100
+                  : 60;
+      punishRouletteTimer = setTimeout(spin, delay);
+    }
+
+    spin();
+  });
+}
+
 /* Se elige el castigo final, se guarda ya como aplicado (obligatorio,
-   sin confirmación) y arranca el timer de 6 horas del receptor. */
+   sin confirmación) y arranca el timer de 6 horas del receptor.
+   Si el castigo es "Autofill", antes de guardar se sortea además un
+   campeón (segunda ruleta) y ese campeón queda como ícono del castigo. */
 async function landPunishment() {
   punishRouletteTimer = null;
   const final = PUNISHMENTS[Math.floor(Math.random() * PUNISHMENTS.length)];
   selectedPunishment = final;
 
-  document.getElementById("punishResultIcon").textContent = final.icon;
+  setResultIcon(final.icon);
   document.getElementById("punishResultName").textContent = final.name;
   document.getElementById("punishResultDesc").textContent = final.desc;
+
+  if (final.isChampionRoulette) {
+    const champion = await runChampionRouletteAnimation();
+    final.champion = champion; // se guarda junto al castigo
+    setResultIcon(champIconUrl(champion.id), true);
+    document.getElementById("punishResultName").textContent = `Autofill: ${champion.name}`;
+    document.getElementById("punishResultDesc").textContent = `Debes jugar ${champion.name} en tu próxima partida.`;
+  }
 
   await savePunishment(punishTarget.summonerName, currentUser.player, final);
   activePunishments = await loadPunishments();
 
-  showToast(`💥 ¡<b>${final.icon} ${final.name}</b> le tocó a ${punishTarget.summonerName}! Ya está activo por 6 horas.`);
+  const toastLabel = final.champion
+    ? `🔀 <b>Autofill: ${final.champion.name}</b>`
+    : `<b>${final.icon} ${final.name}</b>`;
+  showToast(`💥 ¡${toastLabel} le tocó a ${punishTarget.summonerName}! Ya está activo por 6 horas.`);
   updateNavCooldown();
   renderTable();
 
@@ -645,6 +756,7 @@ function renderPunishmentCell(player) {
 
   if (record) {
     const p = record.punishment;
+    const champion = p.champion; // solo existe si el castigo fue "Autofill"
 
     // El castigo se aplica al instante (obligatorio, sin confirmación):
     // el timer de 6h corre desde que se sorteó.
@@ -652,10 +764,22 @@ function renderPunishmentCell(player) {
     const h = Math.floor(remaining/3600000);
     const m = Math.floor((remaining%3600000)/60000);
     const timeStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
+
+    // Si es Autofill, el ícono que se ve en la tabla es directamente el
+    // campeón que le tocó jugar (así se sabe de un vistazo qué campeón es).
+    const chipIcon = champion
+      ? `<img src="${champIconUrl(champion.id)}" alt="${champion.name}" title="${champion.name}"
+           class="w-7 h-7 rounded-md object-cover border border-accent cursor-default">`
+      : `<span class="text-2xl cursor-default">${p.icon}</span>`;
+
+    const tooltipIcon = champion
+      ? `<img src="${champIconUrl(champion.id)}" alt="${champion.name}" class="w-6 h-6 rounded object-cover">`
+      : `<span class="text-[15px]">${p.icon}</span>`;
+
     return `
     <div class="punishment-wrap">
       <div class="flex items-center gap-1.5">
-        <span class="text-2xl cursor-default">${p.icon}</span>
+        ${chipIcon}
         <div class="cooldown-pill">
           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
           ${timeStr}
@@ -663,10 +787,10 @@ function renderPunishmentCell(player) {
       </div>
       <div class="punishment-tooltip">
         <div class="flex items-center gap-2 mb-2">
-          <span class="text-[15px]">${p.icon}</span>
-          <span class="font-extrabold text-white text-sm">${p.name}</span>
+          ${tooltipIcon}
+          <span class="font-extrabold text-white text-sm">${champion ? `Autofill: ${champion.name}` : p.name}</span>
         </div>
-        <p class="text-text-dim text-[15px] leading-relaxed mb-2">${p.desc}</p>
+        <p class="text-text-dim text-[15px] leading-relaxed mb-2">${champion ? `Debes jugar <b class="text-white">${champion.name}</b> en tu próxima partida.` : p.desc}</p>
         <div class="text-[15px] text-text-dimmer border-t border-[#2a2a35] pt-2 mt-1">
           Enviado por <span class="text-accent font-bold">${record.senderName}</span> · expira en ${timeStr}
         </div>
@@ -921,6 +1045,7 @@ async function init() {
   initFirebase();
   authInit();
   initPunishModal();
+  loadDDragonVersion(); // versión de Data Dragon para los íconos de campeones (Autofill)
 
   try {
     const res=await fetch(DATA_URL,{cache:"no-store"});
