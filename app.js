@@ -10,7 +10,6 @@
    ============================================================ */
   const PUNISHMENTS = [
   {
-  {
     id: 1,
     icon: "assets/punishments/pato.webp",
     name: "Runa Clasicarda",
@@ -20,7 +19,7 @@
     id: 2,
     icon: "🔀",
     name: "Autofill",
-    desc: "Se sortea un campeón al azar entre 25. Debes jugar ese campeón en tu próxima partida.",
+    desc: "Se sortea un campeón al azar. Debes jugar ese campeón en tu próxima partida.",
     isChampionRoulette: true
   }
 ];
