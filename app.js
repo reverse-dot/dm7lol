@@ -9,14 +9,56 @@
    CASTIGOS — 8 opciones aleatorias
    ============================================================ */
 const PUNISHMENTS = [
-  { id: 1, icon: "🤡", name: "Clown Mode",       desc: "Jugar la próxima partida con el campeón más troll del parche." },
-  { id: 2, icon: "🔇", name: "Silencio total",    desc: "Mutear a todos y jugar sin comunicación la siguiente partida." },
-  { id: 3, icon: "🐌", name: "Slow Motion",       desc: "Jugar solo con objetos de movimiento, sin daño por 1 partida." },
-  { id: 4, icon: "🎯", name: "Mid or Feed",       desc: "Solo puede ir a mid, aunque no sea su rol, en la próxima partida." },
-  { id: 5, icon: "🙈", name: "No mires el mapa",  desc: "Prohibido mirar el minimapa durante toda la siguiente partida." },
-  { id: 6, icon: "🎪", name: "Support vida",      desc: "Jugar de support con build full AP sin importar el campeón." },
-  { id: 7, icon: "💸", name: "Gastador",          desc: "Debe gastar todo el oro apenas lo tenga, sin guardar nada." },
-  { id: 8, icon: "🦆", name: "El Pato",           desc: "Escribir 'cuac' en el chat cada vez que muera en la partida." },
+  const PUNISHMENTS = [
+  {
+    id: 1,
+    icon: "assets/punishments/clown.webp",
+    name: "El Antiflash",
+    desc: "Tienes prohibido seleccionar el hechizo Destello (Flash)."
+  },
+  {
+    id: 2,
+    icon: "assets/punishments/silencio.webp",
+    name: "Banea2 de la Grieta",
+    desc: "Tienes baneados tus 3 campeones más jugados de la temporada"
+  },
+  {
+    id: 3,
+    icon: "assets/punishments/slow-motion.webp",
+    name: "Ruleta Rusa de Riot",
+    desc: "Jugar solo con objetos de movimiento, sin daño por 1 partida."
+  },
+  {
+    id: 4,
+    icon: "assets/punishments/mid-feed.webp",
+    name: "Sin Ganas de Vivir",
+    desc: " No puedes comprar ningún tipo de botas en toda la partida. Tampoco vale llevar la runa de Calzado Mágico."
+  },
+  {
+    id: 5,
+    icon: "assets/punishments/no-map.webp",
+    name: "Masoquista del Parche",
+    desc: "Busca en OP.GG o U.GG el campeón con el Winrate más bajo para jugarlo la próxima partida."
+  },
+  {
+    id: 6,
+    icon: "assets/punishments/support.webp",
+    name: "Pantalla de Microondas",
+    desc: "Entra a los ajustes visuales y reduce el mapa y la interfaz (HUD) al 0%."
+  },
+  {
+    id: 7,
+    icon: "assets/punishments/gastador.webp",
+    name: "El sin Vida",
+    desc: "Tienes estrictamente prohibido comprar pociones de vida, de reutilización o galletas al inicio y durante toda la partida."
+  },
+  {
+    id: 8,
+    icon: "assets/punishments/pato.webp",
+    name: "Runa Clasicarda",
+    desc: "No puedes equiparte la runa clave principal de tu campeón."
+  }
+];
 ];
 
 const COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6 horas
