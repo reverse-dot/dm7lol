@@ -37,21 +37,6 @@ const TIER_ORDER = [
 // División dentro del tier: I es la más alta, IV la más baja.
 const DIVISION_ORDER = { "IV": 0, "III": 1, "II": 2, "I": 3 };
 
-// Colores por tier para el emblema (no reproduce assets de Riot Games).
-const TIER_COLORS = {
-  IRON:        ["#8a8a8a", "#5c5c5c"],
-  BRONZE:      ["#c4834b", "#7c4a24"],
-  SILVER:      ["#c4d4dc", "#8296a1"],
-  GOLD:        ["#ffd76b", "#b9861f"],
-  PLATINUM:    ["#5fe3c9", "#1f8a78"],
-  EMERALD:     ["#3ddc84", "#0d7a41"],
-  DIAMOND:     ["#7ea8ff", "#3450c2"],
-  MASTER:      ["#d17bff", "#7a1fc2"],
-  GRANDMASTER: ["#ff6b6b", "#a11f1f"],
-  CHALLENGER:  ["#8affe0", "#f0b232"],
-  DEFAULT:     ["#ff8a3d", "#c23df0"],
-};
-
 function parseElo(eloStr) {
   if (!eloStr) return { tierIdx: -1, divisionIdx: -1, tierName: "" };
   const parts = eloStr.trim().split(/\s+/);
@@ -356,24 +341,34 @@ function roleIcon(role) {
     onerror="this.outerHTML='<span class=&quot;role-fallback&quot; title=&quot;${label}&quot;>${ROLE_FALLBACK}</span>'">`;
 }
 
-/* ---------------- emblema de rango (por tier del jugador) ---------------- */
+/* ---------------- emblema de rango (imagen oficial de LoL, por CDN) ---------------- */
+
+// Emblemas oficiales de Riot Games, servidos por CommunityDragon (mirror
+// público creado bajo la política "Legal Jibber Jabber" de Riot — el mismo
+// mecanismo por el que ya se usa ddragon.leagueoflegends.com para los avatares
+// más arriba). No se copian archivos: el navegador pide la imagen directo
+// a ese CDN, igual que ya hace con `avatar`.
+const EMBLEM_CDN =
+  "https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/ranked-emblem/emblem-";
+
+// Tiers que tienen emblema disponible en el CDN.
+const EMBLEM_TIERS = new Set([
+  "IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM",
+  "EMERALD", "DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER",
+]);
 
 function emblemSvg(size, small, eloStr) {
-  // Icono original de rango (no reproduce assets de Riot Games).
-  // El color cambia según el tier real del jugador (Iron, Gold, Emerald, etc).
   const { tierName } = parseElo(eloStr);
-  const [c1, c2] = TIER_COLORS[tierName] || TIER_COLORS.DEFAULT;
-  const gradId = "g-" + (tierName || "default") + "-" + size + (small ? "s" : "");
-  return `<svg class="${small ? "emblem-sm" : "emblem"}" width="${size}" height="${size}" viewBox="0 0 48 48" fill="none">
-    <path d="M24 3 L41 12 V25 C41 34 33 41 24 45 C15 41 7 34 7 25 V12 Z"
-      fill="url(#${gradId})" stroke="#000" stroke-opacity="0.25"/>
-    <path d="M24 10 L34 15 V25 C34 31 29 35.5 24 38 C19 35.5 14 31 14 25 V15 Z" fill="#0a0a0e" fill-opacity="0.35"/>
-    <path d="M24 16 L18 27 H22 L20 34 L30 21 H26 L28 16 Z" fill="#0a0a0e"/>
-    <defs>
-      <linearGradient id="${gradId}" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
-        <stop stop-color="${c1}"/>
-        <stop offset="1" stop-color="${c2}"/>
-      </linearGradient>
-    </defs>
-  </svg>`;
+  const cls = small ? "emblem-sm" : "emblem";
+
+  if (!EMBLEM_TIERS.has(tierName)) {
+    // "Sin clasificar" u otro valor no reconocido: sin emblema.
+    return `<span class="${cls} emblem-empty" style="width:${size}px;height:${size}px"></span>`;
+  }
+
+  const key = tierName.toLowerCase();
+  const label = tierName[0] + tierName.slice(1).toLowerCase();
+  return `<img class="${cls}" width="${size}" height="${size}"
+    src="${EMBLEM_CDN}${key}.png" alt="${label}" title="${label}"
+    onerror="this.style.opacity=0">`;
 }
