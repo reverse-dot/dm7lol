@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ranking · SoloQ Challenge</title>
+<link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="top-header">
+    <div class="title-block">
+      <h1>Ranking</h1>
+      <div class="update-line">
+        <span class="hl">Última actualización:</span> <span id="updatedAgo">cargando…</span>
+      </div>
+    </div>
+    <div class="countdown">
+      <span class="clock-icon">⏱</span>
+      <span class="cd-label">EL TORNEO<br>TERMINA EN</span>
+      <div class="cd-time" id="countdown">
+        <span>--</span><span class="unit">d</span>
+        <span>--</span><span class="unit">h</span>
+        <span>--</span><span class="unit">m</span>
+        <span>--</span><span class="unit">s</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PODIUM -->
+  <div class="podium" id="podium"></div>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <div class="tab-group" id="eloTabs">
+      <button class="tab-btn active" data-filter="todos">TODOS</button>
+      <button class="tab-btn" data-filter="high">HIGH ELO</button>
+      <button class="tab-btn" data-filter="low">LOW ELO</button>
+    </div>
+    <div class="search-box">
+      <span>🔍</span>
+      <input type="text" id="searchInput" placeholder="Buscar jugador">
+    </div>
+    <button class="pill-btn" id="liveToggle">● LIVE</button>
+    <button class="pill-btn" id="ingameToggle">● EN PARTIDA</button>
+    <button class="pill-btn">🛡 CASTIGOS <span id="castigosCount">0</span></button>
+    <div class="spacer"></div>
+    <button class="todos-pill">TODOS</button>
+    <button class="stats-dropdown">Stats: OP.GG ▾</button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th data-sort="rank">#</th>
+          <th>Streamer</th>
+          <th>Rol</th>
+          <th data-sort="lp">Elo</th>
+          <th data-sort="winrate">V / D</th>
+          <th>Racha</th>
+          <th data-sort="lpchange">±LP</th>
+          <th>Aegis</th>
+          <th>Shells</th>
+          <th>Stats</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr><td colspan="10" class="empty-state">Cargando datos del ranking…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
