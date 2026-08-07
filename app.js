@@ -10,55 +10,14 @@
    ============================================================ */
   const PUNISHMENTS = [
   {
+  {
     id: 1,
-    icon: "assets/punishments/clown.webp",
-    name: "El Antiflash",
-    desc: "Tienes prohibido seleccionar el hechizo Destello (Flash)."
-  },
-  {
-    id: 2,
-    icon: "assets/punishments/silencio.webp",
-    name: "Banea2 de la Grieta",
-    desc: "Tienes baneados tus 3 campeones más jugados de la temporada"
-  },
-  {
-    id: 3,
-    icon: "assets/punishments/slow-motion.webp",
-    name: "Ruleta Rusa de Riot",
-    desc: "Jugar solo con objetos de movimiento, sin daño por 1 partida."
-  },
-  {
-    id: 4,
-    icon: "assets/punishments/mid-feed.webp",
-    name: "Sin Ganas de Vivir",
-    desc: " No puedes comprar ningún tipo de botas en toda la partida. Tampoco vale llevar la runa de Calzado Mágico."
-  },
-  {
-    id: 5,
-    icon: "assets/punishments/no-map.webp",
-    name: "Masoquista del Parche",
-    desc: "Busca en OP.GG o U.GG el campeón con el Winrate más bajo para jugarlo la próxima partida."
-  },
-  {
-    id: 6,
-    icon: "assets/punishments/support.webp",
-    name: "Pantalla de Microondas",
-    desc: "Entra a los ajustes visuales y reduce el mapa y la interfaz (HUD) al 0%."
-  },
-  {
-    id: 7,
-    icon: "assets/punishments/gastador.webp",
-    name: "El sin Vida",
-    desc: "Tienes estrictamente prohibido comprar pociones de vida, de reutilización o galletas al inicio y durante toda la partida."
-  },
-  {
-    id: 8,
     icon: "assets/punishments/pato.webp",
     name: "Runa Clasicarda",
     desc: "No puedes equiparte la runa clave principal de tu campeón."
   },
   {
-    id: 9,
+    id: 2,
     icon: "🔀",
     name: "Autofill",
     desc: "Se sortea un campeón al azar entre 25. Debes jugar ese campeón en tu próxima partida.",
