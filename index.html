@@ -49,24 +49,22 @@
   .table-scroll { overflow-x: auto; }
   .table-scroll table { min-width: 860px; }
 
-  /* Tooltip de castigo */
+  /* Tooltip de castigo — position:fixed + JS para que nunca quede recortado
+     por el overflow-hidden/overflow-x del contenedor de la tabla. */
   .punishment-wrap { position: relative; display: inline-flex; align-items: center; }
   .punishment-tooltip {
     display: none;
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%);
+    position: fixed;
     background: #18181f;
     border: 1px solid #2a2a35;
     border-radius: 10px;
     padding: 10px 14px;
     width: 220px;
-    z-index: 50;
+    z-index: 9999;
     pointer-events: none;
     box-shadow: 0 8px 32px rgba(0,0,0,0.6);
   }
-  .punishment-tooltip::after {
+  .punishment-tooltip.tooltip-above::after {
     content: '';
     position: absolute;
     top: 100%;
@@ -75,7 +73,15 @@
     border: 6px solid transparent;
     border-top-color: #2a2a35;
   }
-  .punishment-wrap:hover .punishment-tooltip { display: block; }
+  .punishment-tooltip.tooltip-below::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-bottom-color: #2a2a35;
+  }
 
   /* Modal backdrop */
   .modal-backdrop {
