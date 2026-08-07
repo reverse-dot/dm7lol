@@ -623,10 +623,10 @@ function renderPunishmentCell(player) {
       </div>
       <div class="punishment-tooltip">
         <div class="flex items-center gap-2 mb-2">
-          <span class="text-xl">${p.icon}</span>
+          <span class="text-[15px]">${p.icon}</span>
           <span class="font-extrabold text-white text-sm">${p.name}</span>
         </div>
-        <p class="text-text-dim text-xs leading-relaxed mb-2">${p.desc}</p>
+        <p class="text-text-dim text-[15px] leading-relaxed mb-2">${p.desc}</p>
         <div class="text-[15px] text-text-dimmer border-t border-[#2a2a35] pt-2 mt-1">
           Enviado por <span class="text-accent font-bold">${record.senderName}</span> · expira en ${timeStr}
         </div>
@@ -646,7 +646,7 @@ function renderPunishmentCell(player) {
   }
 
   // Sin login, admin, o es el propio jugador
-  return `<span class="text-text-dimmer text-xs">—</span>`;
+  return `<span class="text-text-dimmer text-[15px]">—</span>`;
 }
 
 /* ============================================================
