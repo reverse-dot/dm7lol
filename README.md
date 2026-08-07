@@ -93,16 +93,42 @@ Ya viene el workflow armado en `.github/workflows/update-ranking.yml`, corre tod
 2. **Settings → Pages → Source**: elegí `Deploy from a branch`, rama `main`, carpeta `/ (root)`.
 3. En un par de minutos tu ranking va a estar en `https://tu-usuario.github.io/tu-repo/`.
 
-## Sobre las columnas "Aegis" y "Shells"
+## Sobre la tipografía "Author"
 
-Estas dos columnas no vienen de la Riot API — Riot no tiene el concepto de "puntos Aegis" ni "shells", así que las dejé como campos libres para que vos definas qué significan en tu torneo (puntos bonus, penalizaciones, logros, lo que quieras). El script `update-data.js` las respeta y no las pisa: solo actualiza LP/W/L/racha desde la API y mantiene lo que hayas cargado a mano en `data/players.json` para esos dos campos. Si querés, los podés editar directo en ese archivo:
+Toda la web usa la fuente `Author` como tipografía principal (definida con
+`@font-face` en `style.css`, cae a `Inter` si no está disponible). Los
+archivos van en `fonts/Author-*.otf` — mirá `fonts/README.md` para la lista
+exacta de nombres y el detalle de qué peso/estilo corresponde a cada uno.
+
+## Sobre la columna "Shells"
+
+Esta columna no viene de la Riot API — Riot no tiene el concepto de "shells", así que la dejé como campo libre para que vos definas qué significa en tu torneo (puntos bonus, logros, lo que quieras). El script `update-data.js` la respeta y no la pisa: solo actualiza LP/W/L/racha desde la API y mantiene lo que hayas cargado a mano en `data/players.json` para ese campo. Si querés, lo podés editar directo en ese archivo:
 
 ```json
-"aegisPoints": 16,
 "shells": [{ "icon": "flame", "count": 7 }]
 ```
 
 Iconos disponibles para `shells`: `skull`, `flame`, `clock`, `trophy` (se pueden agregar más en `SHELL_ICONS` dentro de `app.js`).
+
+## Sobre el orden del ranking (elo)
+
+El orden (podio, `#`, y la columna Elo) ya no se calcula solo por LP: se calcula por
+**tier → división → LP**, en ese orden de prioridad. Así un jugador en Emerald I con
+menos LP siempre queda arriba de un Emerald IV con más LP, que es como funciona el
+ranking real de League of Legends. Esto se aplica tanto en `app.js` (frontend) como
+en `scripts/update-data.js` (al generar `data/players.json`).
+
+El emblema que aparece junto al LP también cambia de color según el tier real de
+cada jugador (Hierro, Oro, Esmeralda, Diamante, etc.) — es un ícono propio, no un
+asset de Riot Games, pero distinto para cada rango.
+
+## Sobre el ícono de "Rol"
+
+El ícono de rol (Top/Jungla/Mid/ADC/Support) sale de `assets/roles/{rol}.webp`.
+Vos ponés ahí tus propias imágenes — mirá `assets/roles/README.md` para el detalle
+de nombres de archivo. El rol de cada jugador se define con el campo opcional
+`"role"` en `config/accounts.json` (o directo en `data/players.json`). Si no hay
+`role` definido o falta el `.webp`, se muestra un ícono genérico sin romper nada.
 
 ## Sobre "LIVE" (streaming)
 

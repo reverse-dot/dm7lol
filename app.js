@@ -20,14 +20,60 @@ const state = {
   sortDir: "desc",
 };
 
-const ROLE_ICON = "⚑"; // badge genérico (verificado / reportado), ver README
-
 const SHELL_ICONS = {
   skull: "💀",
   flame: "🔥",
   clock: "🕒",
   trophy: "🏆",
 };
+
+/* ---------------- ranking por elo (tier + división + LP) ---------------- */
+
+// Orden de tiers de LoL, de más bajo a más alto.
+const TIER_ORDER = [
+  "IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM",
+  "EMERALD", "DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER",
+];
+// División dentro del tier: I es la más alta, IV la más baja.
+const DIVISION_ORDER = { "IV": 0, "III": 1, "II": 2, "I": 3 };
+
+// Colores por tier para el emblema (no reproduce assets de Riot Games).
+const TIER_COLORS = {
+  IRON:        ["#8a8a8a", "#5c5c5c"],
+  BRONZE:      ["#c4834b", "#7c4a24"],
+  SILVER:      ["#c4d4dc", "#8296a1"],
+  GOLD:        ["#ffd76b", "#b9861f"],
+  PLATINUM:    ["#5fe3c9", "#1f8a78"],
+  EMERALD:     ["#3ddc84", "#0d7a41"],
+  DIAMOND:     ["#7ea8ff", "#3450c2"],
+  MASTER:      ["#d17bff", "#7a1fc2"],
+  GRANDMASTER: ["#ff6b6b", "#a11f1f"],
+  CHALLENGER:  ["#8affe0", "#f0b232"],
+  DEFAULT:     ["#ff8a3d", "#c23df0"],
+};
+
+function parseElo(eloStr) {
+  if (!eloStr) return { tierIdx: -1, divisionIdx: -1, tierName: "" };
+  const parts = eloStr.trim().split(/\s+/);
+  const tierName = (parts[0] || "").toUpperCase();
+  const divisionRoman = parts[1] || null;
+  const tierIdx = TIER_ORDER.indexOf(tierName);
+  const divisionIdx = divisionRoman && DIVISION_ORDER[divisionRoman] !== undefined
+    ? DIVISION_ORDER[divisionRoman]
+    : 4; // tiers apex (Master+) no tienen división -> se tratan como la más alta
+  return { tierIdx, divisionIdx, tierName };
+}
+
+// Puntaje comparable: primero tier, después división, después LP.
+// Así un Emerald I con menos LP siempre queda por encima de un Emerald IV con más LP.
+function rankScore(p) {
+  const { tierIdx, divisionIdx } = parseElo(p.elo);
+  return (tierIdx + 1) * 100000 + divisionIdx * 10000 + (p.lp || 0);
+}
+
+function sortByRank(list) {
+  return [...list].sort((a, b) => rankScore(b) - rankScore(a));
+}
 
 init();
 
@@ -42,7 +88,7 @@ async function init() {
   } catch (err) {
     console.error(err);
     document.getElementById("tableBody").innerHTML =
-      `<tr><td colspan="10" class="empty-state">No se pudo cargar data/players.json.<br>
+      `<tr><td colspan="9" class="empty-state">No se pudo cargar data/players.json.<br>
        Corré scripts/update-data.js o revisá que el archivo exista.</td></tr>`;
     return;
   }
@@ -89,7 +135,7 @@ function pad(n){ return n.toString().padStart(2, "0"); }
 /* ---------------- podium (top 3) ---------------- */
 
 function renderPodium() {
-  const top3 = [...state.players].sort((a, b) => b.lp - a.lp).slice(0, 3);
+  const top3 = sortByRank(state.players).slice(0, 3);
   const medals = ["👑", "🥈", "🥉"];
   const cls = ["rank-1", "rank-2", "rank-3"];
 
@@ -107,7 +153,7 @@ function renderPodium() {
         <div class="edit-badge">✎</div>
       </div>
       <div class="lp-row">
-        ${emblemSvg(46)}
+        ${emblemSvg(46, false, p.elo)}
         <span class="lp-value">${formatLP(p.lp)}<span class="lp-unit">LP</span></span>
       </div>
       <div class="stat-row">
@@ -163,9 +209,6 @@ function bindControls() {
       renderTable();
     });
   });
-
-  const castigos = state.players.filter(p => (p.aegisPoints || 0) < 0).length;
-  document.getElementById("castigosCount").textContent = castigos;
 }
 
 function getFiltered() {
@@ -185,11 +228,12 @@ function getFiltered() {
   const dir = state.sortDir === "desc" ? -1 : 1;
   list.sort((a, b) => {
     switch (state.sortKey) {
-      case "lp": return (a.lp - b.lp) * dir;
+      // "Elo" y "#" ordenan por tier + división + LP, no solo por LP.
+      case "lp": return (rankScore(a) - rankScore(b)) * dir;
       case "winrate": return (winrate(a) - winrate(b)) * dir;
       case "lpchange": return ((a.lpGain24h - a.lpLoss24h) - (b.lpGain24h - b.lpLoss24h)) * dir;
       case "rank":
-      default: return (a.lp - b.lp) * dir * -1; // rank sigue LP desc por defecto
+      default: return (rankScore(a) - rankScore(b)) * dir * -1; // rank sigue elo+división desc por defecto
     }
   });
 
@@ -201,22 +245,23 @@ function renderTable() {
   const body = document.getElementById("tableBody");
 
   if (!list.length) {
-    body.innerHTML = `<tr><td colspan="10" class="empty-state">No hay jugadores que coincidan con el filtro.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="9" class="empty-state">No hay jugadores que coincidan con el filtro.</td></tr>`;
     return;
   }
 
-  const sortedByLP = [...state.players].sort((a, b) => b.lp - a.lp);
+  // El ranking general (medalla / #) siempre sigue tier + división + LP,
+  // sin importar por qué columna esté ordenada la tabla en este momento.
+  const sortedByRank = sortByRank(state.players);
 
   body.innerHTML = list.map(p => {
-    const overallRank = sortedByLP.findIndex(x => x.summonerName === p.summonerName) + 1;
-    const rowCls = overallRank === 1 ? "top1" : overallRank === 2 ? "top2" : overallRank === 3 ? "top3" : "rest";
+    const overallRank = sortedByRank.findIndex(x => x.summonerName === p.summonerName) + 1;
     const medal = overallRank === 1 ? "👑" : overallRank === 2 ? "🥈" : overallRank === 3 ? "🥉" : overallRank;
     const wr = winrate(p);
     const gain = p.lpGain24h ?? 0;
     const loss = p.lpLoss24h ?? 0;
 
     return `
-    <tr class="${rowCls}">
+    <tr>
       <td class="rank-cell"><span class="medal">${medal}</span></td>
       <td>
         <div class="player-cell">
@@ -230,19 +275,21 @@ function renderTable() {
           </div>
         </div>
       </td>
-      <td><div class="role-icon">${ROLE_ICON}</div></td>
+      <td><div class="role-icon">${roleIcon(p.role)}</div></td>
       <td>
-        <div class="elo-cell">${emblemSvg(20, true)} ${formatLP(p.lp)} LP</div>
+        <div class="elo-cell">${emblemSvg(20, true, p.elo)} ${formatLP(p.lp)} LP</div>
       </td>
       <td class="vd-cell">
         <div class="vd-top"><span class="wr">${wr}%</span><span class="games">${p.wins}W · ${p.losses}D</span></div>
-        <div class="vd-bar"><span class="w" style="width:${wr}%"></span><span class="l" style="width:${100 - wr}%"></span></div>
+        <div class="vd-bar">
+          <span class="w" style="width:${wr}%"></span>
+          <span class="l" style="width:${100 - wr}%"></span>
+        </div>
       </td>
       <td class="streak-cell">${sparkline(p.last20)}</td>
       <td class="lp-change">
         <span class="up">▲ ${gain}</span><span class="down">▼ ${loss}</span>
       </td>
-      <td><div class="aegis-cell">🛡 ${p.aegisPoints ?? 0}</div></td>
       <td>
         <div class="shells-cell">
           ${(p.shells || []).map(s => `<span class="shell-badge">${SHELL_ICONS[s.icon] || "•"} ${s.count ?? s.label ?? ""}</span>`).join("")}
@@ -287,18 +334,42 @@ function sparkline(last20) {
   </svg>`;
 }
 
-function emblemSvg(size, small) {
+/* ---------------- rol (icono por posición) ---------------- */
+
+const ROLE_KEYS = ["top", "jungle", "mid", "adc", "support"];
+const ROLE_LABELS = { top: "Top", jungle: "Jungla", mid: "Mid", adc: "ADC", support: "Support" };
+const ROLE_FALLBACK = "⚑";
+
+// Busca los íconos en assets/roles/{top,jungle,mid,adc,support}.webp.
+// Si el archivo no existe todavía (o el rol no está definido), muestra
+// un badge genérico en su lugar — no rompe la tabla.
+function roleIcon(role) {
+  const key = (role || "").toLowerCase();
+  if (!ROLE_KEYS.includes(key)) {
+    return `<span class="role-fallback" title="Rol no definido">${ROLE_FALLBACK}</span>`;
+  }
+  const label = ROLE_LABELS[key];
+  return `<img class="role-img" src="assets/roles/${key}.webp" alt="${label}" title="${label}"
+    onerror="this.outerHTML='<span class=&quot;role-fallback&quot; title=&quot;${label}&quot;>${ROLE_FALLBACK}</span>'">`;
+}
+
+/* ---------------- emblema de rango (por tier del jugador) ---------------- */
+
+function emblemSvg(size, small, eloStr) {
   // Icono original de rango (no reproduce assets de Riot Games).
+  // El color cambia según el tier real del jugador (Iron, Gold, Emerald, etc).
+  const { tierName } = parseElo(eloStr);
+  const [c1, c2] = TIER_COLORS[tierName] || TIER_COLORS.DEFAULT;
+  const gradId = "g-" + (tierName || "default") + "-" + size + (small ? "s" : "");
   return `<svg class="${small ? "emblem-sm" : "emblem"}" width="${size}" height="${size}" viewBox="0 0 48 48" fill="none">
     <path d="M24 3 L41 12 V25 C41 34 33 41 24 45 C15 41 7 34 7 25 V12 Z"
-      fill="url(#g)" stroke="#000" stroke-opacity="0.25"/>
+      fill="url(#${gradId})" stroke="#000" stroke-opacity="0.25"/>
     <path d="M24 10 L34 15 V25 C34 31 29 35.5 24 38 C19 35.5 14 31 14 25 V15 Z" fill="#0a0a0e" fill-opacity="0.35"/>
     <path d="M24 16 L18 27 H22 L20 34 L30 21 H26 L28 16 Z" fill="#0a0a0e"/>
     <defs>
-      <linearGradient id="g" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
-        <stop stop-color="#ff8a3d"/>
-        <stop offset="0.5" stop-color="#ff4d6d"/>
-        <stop offset="1" stop-color="#c23df0"/>
+      <linearGradient id="${gradId}" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+        <stop stop-color="${c1}"/>
+        <stop offset="1" stop-color="${c2}"/>
       </linearGradient>
     </defs>
   </svg>`;

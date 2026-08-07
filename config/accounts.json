@@ -1,5 +1,5 @@
 {
-  "_comment": "Agrega o quita cuentas aqu\u00ed. 'riotId' y 'tagLine' son el Riot ID (ej: si tu invocador es Siler#SOL, riotId='Siler', tagLine='SOL'). 'region' es la regi\u00f3n de la cuenta (americas, europe, asia, sea). 'platform' es el servidor (na1, euw1, eun1, kr, la1, la2, br1, oc1, etc). 'displayTag' es lo que se muestra debajo del nombre en la web.",
+  "_comment": "Agrega o quita cuentas aqu\u00ed. 'riotId' y 'tagLine' son el Riot ID (ej: si tu invocador es Siler#SOL, riotId='Siler', tagLine='SOL'). 'region' es la regi\u00f3n de la cuenta (americas, europe, asia, sea). 'platform' es el servidor (na1, euw1, eun1, kr, la1, la2, br1, oc1, etc). 'displayTag' es lo que se muestra debajo del nombre en la web. 'role' es opcional: 'top', 'jungle', 'mid', 'adc' o 'support' (define qu\u00e9 \u00edcono de rol se muestra en la tabla, ver assets/roles/).",
   "tournamentEndsAt": "2026-08-19T07:30:32Z",
   "accounts": [
     {
@@ -8,6 +8,7 @@
       "region": "americas",
       "platform": "la2",
       "displayTag": "eMonkeyz Run#514",
+      "role": "mid",
       "opggUrl": "https://op.gg/summoners/na/JavierLoL-514"
     },
     {
@@ -16,6 +17,7 @@
       "region": "americas",
       "platform": "la2",
       "displayTag": "JNOGALES CORTI#SOL",
+      "role": "adc",
       "opggUrl": "https://op.gg/summoners/na/Siler-SOL"
     },
     {
@@ -24,6 +26,7 @@
       "region": "americas",
       "platform": "la2",
       "displayTag": "depredador \u00e1pice#6XX",
+      "role": "top",
       "opggUrl": "https://op.gg/summoners/na/sol1xd-6XX"
     }
   ]

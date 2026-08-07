@@ -41,6 +41,26 @@ const REQUEST_DELAY_MS = 900;
 
 const DDRAGON_VERSION = "14.15.1";
 
+// Mismo criterio de orden que usa la web (app.js): tier + división + LP,
+// no solo LP. Así un Emerald I con menos LP queda arriba de un Emerald IV
+// con más LP.
+const TIER_ORDER = [
+  "IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM",
+  "EMERALD", "DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER",
+];
+const DIVISION_ORDER = { "IV": 0, "III": 1, "II": 2, "I": 3 };
+
+function rankScore(p) {
+  if (!p.elo) return -1;
+  const parts = p.elo.trim().split(/\s+/);
+  const tierIdx = TIER_ORDER.indexOf((parts[0] || "").toUpperCase());
+  const divisionRoman = parts[1] || null;
+  const divisionIdx = divisionRoman && DIVISION_ORDER[divisionRoman] !== undefined
+    ? DIVISION_ORDER[divisionRoman]
+    : 4;
+  return (tierIdx + 1) * 100000 + divisionIdx * 10000 + (p.lp || 0);
+}
+
 main().catch(err => {
   console.error("Fallo el update:", err);
   process.exit(1);
@@ -66,7 +86,7 @@ async function main() {
     await sleep(REQUEST_DELAY_MS);
   }
 
-  results.sort((a, b) => b.lp - a.lp);
+  results.sort((a, b) => rankScore(b) - rankScore(a));
   results.forEach((p, i) => (p.rank = i + 1));
 
   const output = {
@@ -88,7 +108,7 @@ function loadPrevious() {
 }
 
 async function buildPlayer(account, previous) {
-  const { riotId, tagLine, region, platform, displayTag, opggUrl } = account;
+  const { riotId, tagLine, region, platform, displayTag, opggUrl, role } = account;
 
   // 1) account-v1: riot id -> puuid
   const acc = await riotFetch(
@@ -142,9 +162,9 @@ async function buildPlayer(account, previous) {
   const winsLast20 = last20.filter(x => x === 1).length;
   const lossesLast20 = last20.length - winsLast20;
 
-  // Campos que Riot no provee (aegisPoints, shells, live) se heredan
-  // del snapshot anterior para que el organizador los edite a mano
-  // en data/players.json o config/accounts.json sin perderlos cada 24h.
+  // Campos que Riot no provee (shells, live) se heredan del snapshot
+  // anterior para que el organizador los edite a mano en data/players.json
+  // sin perderlos cada 24h.
   const prevPlayer = previous?.players?.find(p => p.summonerName === riotId);
 
   return {
@@ -160,7 +180,9 @@ async function buildPlayer(account, previous) {
     last20,
     lpGain24h: estimateGain(winsLast20),
     lpLoss24h: estimateLoss(lossesLast20),
-    aegisPoints: prevPlayer?.aegisPoints ?? 0,
+    // "role" es manual: se define en config/accounts.json (top/jungle/mid/adc/support)
+    // y si no está seteado ahí, se conserva el último valor cargado a mano.
+    role: role || prevPlayer?.role || null,
     shells: prevPlayer?.shells ?? [],
     live: prevPlayer?.live ?? false,
     inGame,
