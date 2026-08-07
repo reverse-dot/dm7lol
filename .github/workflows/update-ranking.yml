@@ -1,0 +1,45 @@
+name: Actualizar ranking
+
+# Corre solo (sin que vos hagas nada) todos los días a las 09:00 UTC,
+# y también podés dispararlo a mano desde la pestaña "Actions" del repo.
+# Para que esto funcione tenés que cargar tu Riot API key como secret
+# del repo: Settings → Secrets and variables → Actions → New repository
+# secret → nombre RIOT_API_KEY.
+#
+# OJO: las API keys de desarrollo de Riot expiran cada 24h. Si usás una
+# dev key normal vas a tener que ir a https://developer.riotgames.com/,
+# generar una nueva, y pisar el secret todos los días antes de que corra
+# este workflow. Si querés que esto sea 100% automático sin tocar nada,
+# hay que pedir una "Production API Key" a Riot (aplicación gratuita,
+# pero con revisión), que no expira.
+
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Actualizar data/players.json desde la Riot API
+        env:
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+        run: node scripts/update-data.js
+
+      - name: Commitear el nuevo ranking
+        run: |
+          git config user.name "ranking-bot"
+          git config user.email "actions@github.com"
+          git add data/players.json
+          git diff --staged --quiet && echo "Sin cambios" || git commit -m "Actualizar ranking $(date -u +%Y-%m-%d\ %H:%M)"
+          git push
