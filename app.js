@@ -191,9 +191,9 @@ function renderPodium() {
         </span>
       </div>
       <div class="flex justify-between gap-2 mb-3">
-        <div class="text-[13px]"><b class="block text-[18px] font-extrabold">${p.wins}W ${p.losses}L</b><span class="text-text-dim text-xs italic">${p.wins+p.losses} partidas</span></div>
-        <div class="text-[13px]"><b class="block text-[18px] font-extrabold">${wr}%</b><span class="text-text-dim text-xs italic">Winrate</span></div>
-        <div class="text-[13px]"><b class="block text-[18px] font-extrabold">${countWL(p.last20,1)}W ${countWL(p.last20,0)}L</b><span class="text-text-dim text-xs italic">Últimas 20</span></div>
+        <div class="text-[13px]"><b class="block text-[18px] font-extrabold">${p.wins}W ${p.losses}L</b><span class="text-text-dim text-xs !italic">${p.wins+p.losses} partidas</span></div>
+        <div class="text-[13px]"><b class="block text-[18px] font-extrabold">${wr}%</b><span class="text-text-dim text-xs !italic">Winrate</span></div>
+        <div class="text-[13px]"><b class="block text-[18px] font-extrabold">${countWL(p.last20,1)}W ${countWL(p.last20,0)}L</b><span class="text-text-dim text-xs !italic">Últimas 20</span></div>
       </div>
       <div class="wl-bar mt-1">
         <span class="bar-w" style="width:${wr}%"></span>
@@ -293,7 +293,7 @@ function renderTable() {
               ${p.verified?'<span class="text-[13px] italic text-text-dimmer">✓</span>':""}
               ${p.live?'<span class="bg-accent text-bg text-[9px] font-black px-1.5 py-px rounded">● LIVE</span>':""}
             </span>
-            <span class="text-[11px] text-text-dim">${p.riotTag}</span>
+            <span class="text-[13px] text-text-dim">${p.riotTag}</span>
           </div>
         </div>
       </td>
