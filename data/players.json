@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-07T08:02:48.417Z",
+  "updatedAt": "2026-08-07T08:36:34.433Z",
   "tournamentEndsAt": "2026-08-19T07:30:32Z",
   "players": [
     {
@@ -119,7 +119,7 @@
       "role": "mid",
       "shells": [],
       "live": false,
-      "inGame": false,
+      "inGame": true,
       "opggUrl": "https://op.gg/summoners/na/JavierLoL-514"
     }
   ]
