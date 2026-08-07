@@ -161,7 +161,10 @@ function renderPodium() {
         <div class="stat-col"><b>${wr}%</b><span>Winrate</span></div>
         <div class="stat-col"><b>${countWL(p.last20, 1)}W ${countWL(p.last20, 0)}L</b><span>Últimas 20</span></div>
       </div>
-      <div class="wl-bar"><i style="width:${wr}%"></i></div>
+      <div class="wl-bar">
+        <span class="w" style="width:${wr}%"></span>
+        <span class="l" style="width:${100 - wr}%"></span>
+      </div>
     </div>`;
   }).join("");
 }

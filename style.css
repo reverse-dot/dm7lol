@@ -252,17 +252,22 @@ html,body{
 .stat-col b{ display:block; font-size: 15px; font-weight: 800; }
 .stat-col span{ color: var(--text-dim); font-size: 12px; }
 
+/* Barra V/D del podio: mismos dos segmentos separados que la tabla,
+   uno para victorias y otro para derrotas, cada uno con su color. */
 .wl-bar{
   height: 4px;
-  border-radius: 2px;
-  background: var(--loss);
-  overflow:hidden;
+  display:flex;
+  gap: 3px;
   margin-top: 4px;
 }
-.wl-bar i{
-  display:block; height:100%;
-  background: var(--accent);
+.wl-bar .w,
+.wl-bar .l{
+  display:block;
+  height:100%;
+  border-radius:1px;
 }
+.wl-bar .w{ background: rgba(52, 211, 153, 0.85); }   /* victorias — emerald-400/85 */
+.wl-bar .l{ background: rgba(251, 113, 133, 0.85); }  /* derrotas — rose-400/85 */
 
 /* ---------- CONTROLS ---------- */
 .controls{
