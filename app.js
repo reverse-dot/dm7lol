@@ -308,7 +308,7 @@ function renderTable() {
       <td class="px-4 py-3 min-w-[150px]">
         <div class="flex justify-between text-[11.5px] mb-1">
           <span class="text-win font-extrabold text-[16px]">${wr}%</span>
-          <span class="text-text-dim">${p.wins}W · ${p.losses}D</span>
+          <span class="text-text-dim text-[11.3px]">${p.wins}W · ${p.losses}D</span>
         </div>
         <div class="vd-bar">
           <span class="bar-w" style="width:${wr}%"></span>
