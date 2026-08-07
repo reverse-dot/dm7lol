@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-07T07:04:47.590Z",
+  "updatedAt": "2026-08-07T07:32:02.992Z",
   "tournamentEndsAt": "2026-08-19T07:30:32Z",
   "players": [
     {
@@ -36,11 +36,11 @@
       ],
       "lpGain24h": 231,
       "lpLoss24h": 189,
+      "role": "adc",
       "shells": [],
       "live": false,
       "inGame": false,
-      "opggUrl": "https://op.gg/summoners/na/Siler-SOL",
-      "role": "adc"
+      "opggUrl": "https://op.gg/summoners/na/Siler-SOL"
     },
     {
       "rank": 2,
@@ -76,11 +76,11 @@
       ],
       "lpGain24h": 210,
       "lpLoss24h": 210,
+      "role": "top",
       "shells": [],
       "live": false,
       "inGame": false,
-      "opggUrl": "https://op.gg/summoners/na/sol1xd-6XX",
-      "role": "top"
+      "opggUrl": "https://op.gg/summoners/na/sol1xd-6XX"
     },
     {
       "rank": 3,
@@ -116,11 +116,11 @@
       ],
       "lpGain24h": 168,
       "lpLoss24h": 252,
+      "role": "mid",
       "shells": [],
       "live": false,
       "inGame": false,
-      "opggUrl": "https://op.gg/summoners/na/JavierLoL-514",
-      "role": "mid"
+      "opggUrl": "https://op.gg/summoners/na/JavierLoL-514"
     }
   ]
 }
