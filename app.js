@@ -8,7 +8,6 @@
 /* ============================================================
    CASTIGOS — 8 opciones aleatorias
    ============================================================ */
-const PUNISHMENTS = [
   const PUNISHMENTS = [
   {
     id: 1,
@@ -58,7 +57,6 @@ const PUNISHMENTS = [
     name: "Runa Clasicarda",
     desc: "No puedes equiparte la runa clave principal de tu campeón."
   }
-];
 ];
 
 const COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6 horas
