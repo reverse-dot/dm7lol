@@ -85,18 +85,22 @@ Puedes modificar la lista en `app.js` → array `PUNISHMENTS`.
 
 ## Reglas del sistema
 
-- Cuando alguien tira un castigo, este queda **"pendiente"**: se muestra en la
-  tabla pero **el timer de 6 horas todavía no corre**.
-- El jugador que **recibió** el castigo tiene que apretar el botón
-  **"Marcar completado"** (aparece en su propia fila) recién ahí arranca el
-  timer de 6 horas.
-- Mientras el castigo está pendiente o activo (dentro de las 6h), esa persona
-  **no puede recibir otro castigo de nadie más**.
+- Cuando alguien tira un castigo, se abre una **ruleta que gira 10 segundos**
+  mostrando los 8 castigos al azar (cada vez más lenta, como una ruleta de
+  verdad) y al terminar se queda con **uno totalmente aleatorio**.
+- El castigo es **obligatorio**: la persona que lo recibe no tiene que
+  confirmarlo ni aceptarlo de ninguna forma. Apenas termina la ruleta, el
+  castigo queda aplicado y **el timer de 6 horas arranca en ese mismo
+  instante**.
+- Mientras el castigo sigue activo (dentro de esas 6h), esa persona **no
+  puede recibir otro castigo de nadie más**.
 - Cada jugador puede **enviar máximo 1 castigo** cada 6 horas (contado desde
-  que lo envía, sin importar si el otro lo confirmó o no).
+  que lo envía).
+- Mientras gira la ruleta, el modal no se puede cerrar — una vez que se
+  arranca a sortear, el castigo se aplica sí o sí.
 - Los castigos son **visibles para todos** con hover sobre el icono.
 - El hover muestra: icono, nombre del castigo, descripción, quién lo envió y
-  (si ya está activo) cuánto tiempo queda.
+  cuánto tiempo queda de las 6 horas.
 
 ---
 

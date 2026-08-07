@@ -49,25 +49,19 @@ function initFirebase() {
    Cada doc (ID = targetName, así solo hay 1 castigo por persona):
    {
      targetName, senderName, punishment,
-     sentAt: cuándo se tiró el castigo (rige el cooldown del que envía),
-     status: "pending" | "active",
-       - "pending": el que lo recibió todavía no clickeó el check.
-                    No tiene límite de tiempo, bloquea indefinidamente
-                    hasta que lo confirme.
-       - "active":  el que lo recibió ya confirmó, empezó a correr
-                    el timer de 6 horas (startedAt).
-     startedAt: cuándo se confirmó el castigo (null mientras está pending)
+     sentAt: cuándo se sorteó y se aplicó el castigo. El castigo es
+             OBLIGATORIO: no hay confirmación del que lo recibe, el
+             timer de 6 horas arranca en el mismo instante en que
+             termina la ruleta.
    }
    ============================================================ */
 
 /* Cache local (fallback si Firebase no está configurado) */
-let localPunishments = {}; // { targetName: { punishment, senderName, sentAt, status, startedAt } }
+let localPunishments = {}; // { targetName: { punishment, senderName, sentAt } }
 
 function isPunishmentEffective(r, now) {
-  if (!r) return false;
-  if (r.status === "pending") return true; // sin límite hasta que confirmen
-  if (r.status === "active" && r.startedAt) return (now - r.startedAt.getTime()) < COOLDOWN_MS;
-  return false;
+  if (!r || !r.sentAt) return false;
+  return (now - r.sentAt.getTime()) < COOLDOWN_MS; // sigue activo mientras no pasen 6h
 }
 
 async function loadPunishments() {
@@ -90,8 +84,6 @@ async function loadPunishments() {
         punishment: d.punishment,
         senderName: d.senderName,
         sentAt: d.sentAt ? d.sentAt.toDate() : null,
-        status: d.status || "active", // compatibilidad con datos viejos
-        startedAt: d.startedAt ? d.startedAt.toDate() : null,
       };
       if (isPunishmentEffective(r, now)) result[d.targetName] = r;
     });
@@ -102,8 +94,10 @@ async function loadPunishments() {
   }
 }
 
+/* El castigo se guarda ya APLICADO: no requiere confirmación de nadie,
+   el que lo recibe está obligado a cumplirlo y el timer de 6h arranca ya. */
 async function savePunishment(targetName, senderName, punishment) {
-  const record = { punishment, senderName, sentAt: new Date(), status: "pending", startedAt: null };
+  const record = { punishment, senderName, sentAt: new Date() };
   localPunishments[targetName] = record;
   if (!db) return;
   try {
@@ -113,33 +107,10 @@ async function savePunishment(targetName, senderName, punishment) {
       targetName, senderName,
       punishment,
       sentAt: firebase.firestore.Timestamp.fromDate(record.sentAt),
-      status: "pending",
-      startedAt: null,
     });
   } catch(e) {
     console.error("Error guardando castigo:", e);
     showToast("❌ No se pudo guardar el castigo. Intenta de nuevo.", true);
-  }
-}
-
-/* El que RECIBIÓ el castigo clickea "completado" → arranca el timer de 6h */
-async function markPunishmentComplete(targetName) {
-  const now = new Date();
-  if (localPunishments[targetName]) {
-    localPunishments[targetName].status = "active";
-    localPunishments[targetName].startedAt = now;
-  }
-  if (!db) return true;
-  try {
-    await db.collection("punishments").doc(targetName).update({
-      status: "active",
-      startedAt: firebase.firestore.Timestamp.fromDate(now),
-    });
-    return true;
-  } catch(e) {
-    console.error("Error confirmando castigo:", e);
-    showToast("❌ No se pudo confirmar el castigo. Intenta de nuevo.", true);
-    return false;
   }
 }
 
@@ -398,70 +369,135 @@ let punishTarget = null;
 let selectedPunishment = null;
 let activePunishments  = {};
 
+let punishRouletteTimer = null; // setTimeout activo de la ruleta (para poder cancelarlo)
+
 function openPunishModal(player) {
   if (!currentUser || currentUser.isAdmin) return; // el admin no juega, no tira castigos
+  if (punishRouletteTimer) { clearTimeout(punishRouletteTimer); punishRouletteTimer = null; }
+
   punishTarget = player;
   selectedPunishment = null;
   document.getElementById("punishTargetName").textContent   = player.summonerName;
   document.getElementById("punishTargetTag").textContent    = player.riotTag;
   document.getElementById("punishTargetAvatar").src         = player.avatar;
   document.getElementById("punishResultIcon").textContent   = "🎲";
-  document.getElementById("punishResultName").textContent   = "Presiona «Sortear castigo» para elegir";
+  document.getElementById("punishResultName").textContent   = "Presiona «Tirar castigo» para sortear";
   document.getElementById("punishResultDesc").textContent   = "";
-  document.getElementById("btnConfirmPunish").disabled      = true;
+
+  const btnRoll = document.getElementById("btnRerollPunish");
+  btnRoll.disabled = false;
+  btnRoll.textContent = "🎲 Tirar castigo";
+
+  const btnClose = document.getElementById("btnClosePunish");
+  btnClose.disabled = false;
+  btnClose.classList.remove("opacity-30", "pointer-events-none");
+
   openModal("punishModal");
 }
 
-function rollPunishment() {
-  const p = PUNISHMENTS[Math.floor(Math.random() * PUNISHMENTS.length)];
-  selectedPunishment = p;
-  document.getElementById("punishResultIcon").textContent = p.icon;
-  document.getElementById("punishResultName").textContent = p.name;
-  document.getElementById("punishResultDesc").textContent = p.desc;
-  document.getElementById("btnConfirmPunish").disabled = false;
-}
+/* Verifica cooldowns y, si está todo OK, arranca la animación de ruleta.
+   El castigo es obligatorio: una vez que arranca la ruleta ya no se puede
+   cancelar ni cerrar el modal, y al terminar se aplica solo, sin que nadie
+   tenga que confirmarlo. */
+async function beginPunishRoulette() {
+  if (!punishTarget || !currentUser) return;
 
-async function confirmPunishment() {
-  if (!punishTarget || !selectedPunishment || !currentUser) return;
+  const btnRoll  = document.getElementById("btnRerollPunish");
+  const btnClose = document.getElementById("btnClosePunish");
+  btnRoll.disabled = true;
+  btnRoll.textContent = "Verificando…";
 
-  const btn = document.getElementById("btnConfirmPunish");
-  btn.disabled = true;
-  btn.textContent = "Guardando…";
-
-  // Verificar cooldown del sender
   const senderCd = await getSenderCooldown(currentUser.player);
   if (senderCd) {
     closeModal("punishModal");
     showToast("⏳ Ya tiraste un castigo. Espera 6 horas para volver a tirar.", true);
-    btn.disabled = false; btn.textContent = "Confirmar";
     return;
   }
 
-  // Verificar cooldown del receiver
   const existing = activePunishments[punishTarget.summonerName];
   if (existing) {
     closeModal("punishModal");
     showToast(`⏳ ${punishTarget.summonerName} ya tiene un castigo activo.`, true);
-    btn.disabled = false; btn.textContent = "Confirmar";
     return;
   }
 
-  await savePunishment(punishTarget.summonerName, currentUser.player, selectedPunishment);
+  // A partir de acá el castigo va sí o sí: se bloquea el cierre del modal.
+  btnClose.disabled = true;
+  btnClose.classList.add("opacity-30", "pointer-events-none");
+  btnRoll.textContent = "🎰 Sorteando…";
+
+  runRouletteAnimation();
+}
+
+/* Animación tipo ruleta: 10 segundos mostrando castigos al azar, cada vez
+   más lento hacia el final, hasta que se frena en el castigo definitivo. */
+function runRouletteAnimation() {
+  const iconEl = document.getElementById("punishResultIcon");
+  const nameEl = document.getElementById("punishResultName");
+  const descEl = document.getElementById("punishResultDesc");
+  descEl.textContent = "Sorteando entre todos los castigos…";
+
+  const TOTAL_MS = 10000;
+  const start = Date.now();
+
+  function spin() {
+    const elapsed = Date.now() - start;
+    const p = PUNISHMENTS[Math.floor(Math.random() * PUNISHMENTS.length)];
+    iconEl.textContent = p.icon;
+    nameEl.textContent = p.name;
+
+    if (elapsed >= TOTAL_MS) {
+      landPunishment();
+      return;
+    }
+    // Se va frenando hacia el final, como una ruleta real.
+    const delay = elapsed > TOTAL_MS - 2500 ? 200
+                : elapsed > TOTAL_MS - 5000 ? 120
+                : 70;
+    punishRouletteTimer = setTimeout(spin, delay);
+  }
+
+  spin();
+}
+
+/* Se elige el castigo final, se guarda ya como aplicado (obligatorio,
+   sin confirmación) y arranca el timer de 6 horas del receptor. */
+async function landPunishment() {
+  punishRouletteTimer = null;
+  const final = PUNISHMENTS[Math.floor(Math.random() * PUNISHMENTS.length)];
+  selectedPunishment = final;
+
+  document.getElementById("punishResultIcon").textContent = final.icon;
+  document.getElementById("punishResultName").textContent = final.name;
+  document.getElementById("punishResultDesc").textContent = final.desc;
+
+  await savePunishment(punishTarget.summonerName, currentUser.player, final);
   activePunishments = await loadPunishments();
 
-  closeModal("punishModal");
-  showToast(`💥 ¡<b>${selectedPunishment.icon} ${selectedPunishment.name}</b> le llegó a ${punishTarget.summonerName}!`);
+  showToast(`💥 ¡<b>${final.icon} ${final.name}</b> le tocó a ${punishTarget.summonerName}! Ya está activo por 6 horas.`);
   updateNavCooldown();
   renderTable();
-  btn.disabled = false; btn.textContent = "Confirmar";
+
+  const btnRoll  = document.getElementById("btnRerollPunish");
+  const btnClose = document.getElementById("btnClosePunish");
+  btnRoll.disabled = true;
+  btnRoll.textContent = "✅ Castigo aplicado";
+  btnClose.disabled = false;
+  btnClose.classList.remove("opacity-30", "pointer-events-none");
+
+  setTimeout(() => closeModal("punishModal"), 1600);
 }
 
 function initPunishModal() {
-  document.getElementById("btnClosePunish").addEventListener("click",  () => closeModal("punishModal"));
-  document.getElementById("btnRerollPunish").addEventListener("click", rollPunishment);
-  document.getElementById("btnConfirmPunish").addEventListener("click", confirmPunishment);
+  document.getElementById("btnClosePunish").addEventListener("click", () => {
+    if (document.getElementById("btnClosePunish").disabled) return;
+    closeModal("punishModal");
+  });
+  document.getElementById("btnRerollPunish").addEventListener("click", beginPunishRoulette);
   document.getElementById("punishModal").addEventListener("click", e => {
-    if (e.target === e.currentTarget) closeModal("punishModal");
+    if (e.target !== e.currentTarget) return;
+    if (document.getElementById("btnClosePunish").disabled) return;
+    closeModal("punishModal");
   });
 }
 
@@ -570,42 +606,9 @@ function renderPunishmentCell(player) {
   if (record) {
     const p = record.punishment;
 
-    // Castigo PENDIENTE: el que lo recibió todavía no confirmó, el timer no corrió
-    if (record.status === "pending") {
-      // Si soy yo el que lo recibió → botón para marcar como completado
-      if (isMe) {
-        return `
-        <button class="complete-btn flex items-center gap-1.5 bg-win/10 border border-win/30
-          text-win hover:bg-win/20 font-bold text-[11px] px-2.5 py-1.5 rounded-lg transition-colors"
-          data-player="${pname}">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-          Marcar completado
-        </button>`;
-      }
-      // Si es otra persona viendo la tabla
-      return `
-      <div class="punishment-wrap">
-        <div class="flex items-center gap-1.5">
-          <span class="text-2xl cursor-default">${p.icon}</span>
-          <div class="cooldown-pill" style="background:rgba(255,201,61,.12);border-color:rgba(255,201,61,.25);color:#ffc93d;">
-            pendiente
-          </div>
-        </div>
-        <div class="punishment-tooltip">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-xl">${p.icon}</span>
-            <span class="font-extrabold text-white text-sm">${p.name}</span>
-          </div>
-          <p class="text-text-dim text-xs leading-relaxed mb-2">${p.desc}</p>
-          <div class="text-[10px] text-text-dimmer border-t border-[#2a2a35] pt-2 mt-1">
-            Enviado por <span class="text-accent font-bold">${record.senderName}</span> · esperando que ${pname} confirme
-          </div>
-        </div>
-      </div>`;
-    }
-
-    // Castigo ACTIVO: ya confirmado, timer de 6h corriendo
-    const remaining = COOLDOWN_MS - (Date.now() - new Date(record.startedAt).getTime());
+    // El castigo se aplica al instante (obligatorio, sin confirmación):
+    // el timer de 6h corre desde que se sorteó.
+    const remaining = COOLDOWN_MS - (Date.now() - new Date(record.sentAt).getTime());
     const h = Math.floor(remaining/3600000);
     const m = Math.floor((remaining%3600000)/60000);
     const timeStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
@@ -737,25 +740,6 @@ function bindControls() {
     if (player) openPunishModal(player);
   });
 
-  // Delegación de eventos para el botón "Marcar completado" (arranca el timer de 6h)
-  document.getElementById("tableBody").addEventListener("click", async e=>{
-    const btn = e.target.closest(".complete-btn");
-    if (!btn) return;
-    const pname = btn.dataset.player;
-    if (!currentUser || currentUser.player !== pname) return; // solo el propio jugador puede confirmar
-
-    btn.disabled = true;
-    btn.textContent = "Confirmando…";
-    const ok = await markPunishmentComplete(pname);
-    if (ok) {
-      activePunishments = await loadPunishments();
-      showToast("✅ Castigo confirmado, ahora corren las 6 horas.");
-      renderTable();
-    } else {
-      btn.disabled = false;
-      btn.textContent = "Marcar completado";
-    }
-  });
 }
 
 function getFiltered() {
