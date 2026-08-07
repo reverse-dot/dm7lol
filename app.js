@@ -179,8 +179,8 @@ function renderPodium() {
         <img class="w-10 h-10 rounded-full object-cover bg-[#23232a] border-2 border-[#2c2c33]"
           src="${p.avatar}" alt="${p.summonerName}" onerror="this.style.opacity=0">
         <div class="flex flex-col">
-          <span class="font-extrabold text-[15px]">${p.summonerName}</span>
-          <span class="text-xs text-text-dim">${p.riotTag}</span>
+          <span class="font-extrabold text-[25px]">${p.summonerName}</span>
+          <span class="text-sm italic text-text-dim">${p.riotTag}</span>
         </div>
         <div class="ml-auto w-6 h-6 rounded-md border border-panel-border flex items-center justify-center text-text-dimmer text-xs">✎</div>
       </div>
@@ -191,9 +191,9 @@ function renderPodium() {
         </span>
       </div>
       <div class="flex justify-between gap-2 mb-3">
-        <div class="text-[13px]"><b class="block text-[15px] font-extrabold">${p.wins}W ${p.losses}L</b><span class="text-text-dim text-xs">${p.wins+p.losses} partidas</span></div>
-        <div class="text-[13px]"><b class="block text-[15px] font-extrabold">${wr}%</b><span class="text-text-dim text-xs">Winrate</span></div>
-        <div class="text-[13px]"><b class="block text-[15px] font-extrabold">${countWL(p.last20,1)}W ${countWL(p.last20,0)}L</b><span class="text-text-dim text-xs">Últimas 20</span></div>
+        <div class="text-[13px]"><b class="block text-[18px] font-extrabold">${p.wins}W ${p.losses}L</b><span class="text-text-dim text-xs">${p.wins+p.losses} partidas</span></div>
+        <div class="text-[13px]"><b class="block text-[18px] font-extrabold">${wr}%</b><span class="text-text-dim text-xs">Winrate</span></div>
+        <div class="text-[13px]"><b class="block text-[18px] font-extrabold">${countWL(p.last20,1)}W ${countWL(p.last20,0)}L</b><span class="text-text-dim text-xs">Últimas 20</span></div>
       </div>
       <div class="wl-bar mt-1">
         <span class="bar-w" style="width:${wr}%"></span>
@@ -288,9 +288,9 @@ function renderTable() {
           <img class="w-8 h-8 rounded-full object-cover bg-[#23232a] border-2 border-[#2c2c33]"
             src="${p.avatar}" alt="" onerror="this.style.opacity=0">
           <div class="flex flex-col gap-px">
-            <span class="font-extrabold text-[13.5px] flex items-center gap-1.5">
+            <span class="font-extrabold text-[16px] flex items-center gap-1.5">
               ${p.summonerName}
-              ${p.verified?'<span class="text-[11px] text-text-dimmer">✓</span>':""}
+              ${p.verified?'<span class="text-[13px] italic text-text-dimmer">✓</span>':""}
               ${p.live?'<span class="bg-accent text-bg text-[9px] font-black px-1.5 py-px rounded">● LIVE</span>':""}
             </span>
             <span class="text-[11px] text-text-dim">${p.riotTag}</span>
@@ -301,13 +301,13 @@ function renderTable() {
         <div class="w-6 h-6 flex items-center justify-center">${roleIcon(p.role)}</div>
       </td>
       <td class="px-4 py-3">
-        <div class="flex items-center gap-2 font-extrabold whitespace-nowrap">
+        <div class="flex items-center text-[16px] gap-2 font-extrabold whitespace-nowrap">
           ${rankImg(20,"inline-block",p.elo)} ${formatLP(p.lp)} LP
         </div>
       </td>
       <td class="px-4 py-3 min-w-[150px]">
         <div class="flex justify-between text-[11.5px] mb-1">
-          <span class="text-win font-extrabold">${wr}%</span>
+          <span class="text-win font-extrabold text-[16px]">${wr}%</span>
           <span class="text-text-dim">${p.wins}W · ${p.losses}D</span>
         </div>
         <div class="vd-bar">
