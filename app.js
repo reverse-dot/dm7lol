@@ -683,7 +683,7 @@ function renderPodium() {
   document.getElementById("podium").innerHTML=top3.map((p,i)=>{
     const wr=winrate(p);
     return `
-    <div class="relative bg-panel border ${borderCls[i]} rounded-2xl p-6">
+    <div class="relative backdrop-blur-lg bg-black/15 border ${borderCls[i]} rounded-2xl p-6">
       <div class="flex items-center gap-3 mb-7">
         <span class="text-xl w-6 text-center">${medals[i]}</span>
         <img class="w-10 h-10 rounded-full object-cover bg-[#23232a] border-2 border-[#2c2c33]" src="${p.avatar}" alt="${p.summonerName}" onerror="this.style.opacity=0">
