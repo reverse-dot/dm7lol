@@ -95,14 +95,18 @@ async function buildPlayer(account, previous) {
     `https://${region}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(riotId)}/${encodeURIComponent(tagLine)}`
   );
 
-  // 2) summoner-v4: puuid -> summonerId + profile icon
+  // 2) summoner-v4: puuid -> profileIconId, summonerLevel.
+  // OJO: desde 2025 Riot sacó el campo "id" (encryptedSummonerId) de esta
+  // respuesta, así que ya NO se puede usar summoner.id para nada.
   const summoner = await riotFetch(
     `https://${platform}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${acc.puuid}`
   );
 
-  // 3) league-v4: summonerId -> ranked solo/duo entry (tier, division, LP, W/L)
+  // 3) league-v4: puuid -> ranked solo/duo entry (tier, división, LP, W/L)
+  // El endpoint viejo (/entries/by-summoner/{summonerId}) fue eliminado por
+  // Riot el 20 de junio de 2025. Ahora se usa directo por puuid.
   const entries = await riotFetch(
-    `https://${platform}.api.riotgames.com/lol/league/v4/entries/by-summoner/${summoner.id}`
+    `https://${platform}.api.riotgames.com/lol/league/v4/entries/by-puuid/${acc.puuid}`
   );
   const solo = entries.find(e => e.queueType === "RANKED_SOLO_5x5");
 
@@ -119,12 +123,16 @@ async function buildPlayer(account, previous) {
   }
 
   // 5) spectator-v5: ¿está en partida ahora mismo?
+  // Riot está desactivando spectator-v5 para LoL (cambios de anonimato,
+  // patch 25.20 en adelante), así que cualquier error acá -no solo el 404
+  // normal de "no está jugando"- se trata simplemente como inGame:false
+  // en vez de tirar abajo la actualización del jugador.
   let inGame = false;
   try {
     await riotFetch(`https://${platform}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${acc.puuid}`);
     inGame = true;
   } catch {
-    inGame = false; // 404 = no está en partida, es la respuesta normal
+    inGame = false;
   }
 
   // Riot no expone el delta de LP por partida, así que estimamos
