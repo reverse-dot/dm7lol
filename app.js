@@ -192,8 +192,8 @@ function renderPodium() {
       </div>
       <div class="flex justify-between gap-2 mb-3">
         <div class="text-[13px]"><b class="block text-[18px] font-extrabold">${p.wins}W ${p.losses}L</b><span class="text-text-dim text-xs">${p.wins+p.losses} partidas</span></div>
-        <div class="text-[13px]"><b class="block text-[18px] font-extrabold">${wr}%</b><span class="text-text-dim text-xs">Winrate</span></div>
-        <div class="text-[13px]"><b class="block text-[18px] font-extrabold">${countWL(p.last20,1)}W ${countWL(p.last20,0)}L</b><span class="text-text-dim text-xs">Últimas 20</span></div>
+        <div class="text-[13px]"><b class="block text-[18px] font-extrabold">${wr}%</b><span class="text-text-dim text-xs italic">Winrate</span></div>
+        <div class="text-[13px]"><b class="block text-[18px] font-extrabold">${countWL(p.last20,1)}W ${countWL(p.last20,0)}L</b><span class="text-text-dim text-xs italic">Últimas 20</span></div>
       </div>
       <div class="wl-bar mt-1">
         <span class="bar-w" style="width:${wr}%"></span>
