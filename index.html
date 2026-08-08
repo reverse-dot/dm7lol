@@ -260,6 +260,7 @@
     width: 100%;
     margin: 0 auto;
     box-sizing: border-box;
+    align-items: start;
   }
   @media (max-width: 900px) {
     .sp-layout { grid-template-columns: 1fr 180px; }
@@ -373,6 +374,7 @@
     flex-direction: column;
     gap: 8px;
     min-height: 0;
+    height: 100%;
   }
   .sp-embed-wrap {
     flex: 1;
@@ -381,6 +383,8 @@
     overflow: hidden;
     position: relative;
     min-height: 0;
+    aspect-ratio: 16/9;
+    width: 100%;
   }
   .sp-embed-wrap iframe {
     width: 100%; height: 100%;
@@ -1032,19 +1036,6 @@
   }
   window.hideSplash = hideSplash;
 
-  // ── updateLiveStatus ──────────────────────────────────────────
-  function updateLiveStatus(anyLive) {
-    const liveEl    = document.getElementById('spLiveIndicator');
-    const offlineEl = document.getElementById('spOfflineIndicator');
-    if (anyLive) {
-      liveEl.style.display    = 'flex';
-      offlineEl.style.display = 'none';
-    } else {
-      liveEl.style.display    = 'none';
-      offlineEl.style.display = 'flex';
-    }
-  }
-
   // ── checkLive: thumbnail trick ────────────────────────────────
   function checkLive(twitchName) {
     return new Promise(resolve => {
@@ -1075,13 +1066,6 @@
       allow="autoplay; fullscreen"
     ></iframe>`;
 
-    // Panel izquierdo: info del streamer activo
-    const s = streamers.find(x => x.twitchName === twitchName);
-    if (s) {
-      document.getElementById('spActiveName').textContent = s.riotId;
-      document.getElementById('spActiveInfo').style.display = 'flex';
-      document.getElementById('spActiveAvatar').textContent = s.riotId[0].toUpperCase();
-    }
   }
 
   function showOfflineEmbed() {
@@ -1116,10 +1100,10 @@
     const list = document.getElementById('spStreamerList');
     const totalViewers = liveList.reduce((s,d) => s + (d.viewers||0), 0);
     const viewersDisplay = liveList.length > 0 ? fmtViewers(totalViewers) : '—';
-    document.getElementById('spViewersCount').textContent   = viewersDisplay;
+    
     document.getElementById('spRightViewers').textContent   = viewersDisplay;
     document.getElementById('spRightLiveCount').textContent = liveList.length;
-    updateLiveStatus(liveList.length > 0);
+    
 
     list.innerHTML = allData.map((d, idx) => `
       <div class="sp-streamer-row${d.isLive && liveList[0] && d.streamer.twitchName===liveList[0].streamer.twitchName?' active-row':''}"
@@ -1184,10 +1168,10 @@
       } else {
         showOfflineEmbed();
       }
-      document.getElementById('spViewersCount').textContent = '—';
+      
       document.getElementById('spRightViewers').textContent = '—';
-      document.getElementById('spActiveInfo').style.display = 'none';
-      updateLiveStatus(false);
+      
+      
     }
   }
 
