@@ -179,9 +179,7 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    background: #0a0a0e;
     transition: opacity 0.4s ease;
-    height: calc(100vh - 64px);
     border-bottom: 1px solid #1f2024;
     overflow: hidden;
   }
@@ -202,7 +200,6 @@
     box-sizing: border-box;
   }
   .sp-topbar-title {
-    font-size: clamp(18px, 2.2vw, 26px);
     font-weight: 900;
     letter-spacing: -0.01em;
     text-align: center;
@@ -457,16 +454,22 @@
     scrollbar-color: #2a2a35 transparent;
   }
   .sp-streamer-row {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    padding: 8px 10px;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .sp-streamer-row:hover { background: #101014; }
-  .sp-streamer-row.active-row { background: #101014; outline: 1px solid #e8ff3d33; }
+  background: #101014;
+  border: 1px solid #1f2024;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.sp-streamer-row:hover {
+  background: #101014;
+}
+
+.sp-streamer-row.active-row {
+  background: #101014;
+  border-color: #e8ff3d;
+  outline: none;
+}
   .sp-row-avatar {
     width: 32px; height: 32px;
     border-radius: 50%;
@@ -765,8 +768,8 @@
   <!-- Barra superior -->
   <div class="sp-topbar">
     <div>
-      <div class="sp-topbar-title">Partidas en <span style="color:#e8ff3d">Stream</span></div>
-      <div class="sp-topbar-sub">Mira quién está en directo ahora.</div>
+      <div class="sp-topbar-title text-3xl">Partidas en Stream</div>
+      <div class="sp-topbar-sub italic">Mira quién está en directo ahora.</div>
     </div>
   </div>
 
@@ -810,7 +813,6 @@
   <div class="sp-footer">
     <button class="sp-cta-btn" onclick="hideSplash()">
       VER RANKING
-      <span class="sp-cta-chevron">⌄</span>
     </button>
   </div>
 
