@@ -178,6 +178,7 @@
   #splashScreen {
     position: relative;
     display: flex;
+    min-height: calc(100vh - 56px);
     flex-direction: column;
     transition: opacity 0.4s ease;
     overflow: hidden;
@@ -243,12 +244,19 @@
     letter-spacing: 0.04em;
   }
   .sp-twitch-btn svg { width:14px; height:14px; fill:#9147ff; }
+  
+.sp-cta-container {
+  display: flex;
+  justify-content: center;
+  padding-top: 4px;
+  padding-bottom: 10px;
+}
 
- .sp-layout {
+  
+.sp-layout {
   display: grid;
-  grid-template-columns: 160px minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 1fr) 280px;
   gap: 16px;
-  flex: 1;
   min-height: 0;
   padding: 10px 16px 0;
   max-width: 1100px;
@@ -260,7 +268,7 @@
 
 @media (max-width: 900px) {
   .sp-layout {
-    grid-template-columns: 140px minmax(0, 1fr) 220px;
+    grid-template-columns: minmax(0, 1fr) 220px;
   }
 }
 
@@ -782,12 +790,7 @@
 
   <!-- Layout 2 columnas -->
   <div class="sp-layout">
- <!-- Izquierda: ranking -->
-  <div class="sp-left">
-    <button class="sp-cta-btn" onclick="hideSplash()">
-      VER RANKING
-    </button>
-  </div>
+  
     <!-- Centro: embed -->
     <div class="sp-center">
       <div class="sp-embed-wrap" id="spEmbedWrap">
@@ -800,6 +803,11 @@
         </div>
       </div>
       <div class="sp-dots" id="spDots"></div>
+      <div class="sp-cta-container">
+  <button class="sp-cta-btn" onclick="scrollToRanking()">
+    VER RANKING
+  </button>
+</div>
     </div>
 
     <!-- Panel derecho: lista streamers -->
