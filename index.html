@@ -176,16 +176,18 @@
   @keyframes spin       { to{transform:rotate(360deg)} }
 
   #splashScreen {
-    position: fixed;
-    inset: 0;
-    z-index: 9000;
+    position: relative;
     display: flex;
     flex-direction: column;
     background: #0a0a0e;
-    transition: opacity 0.5s ease, transform 0.5s ease;
+    transition: opacity 0.4s ease;
+    height: 520px;
+    max-height: 58vh;
+    min-height: 360px;
+    border-bottom: 1px solid #1f2024;
     overflow: hidden;
   }
-  #splashScreen.hiding { opacity:0; transform:translateY(-14px); pointer-events:none; }
+  #splashScreen.hiding { opacity:0; pointer-events:none; }
   #splashScreen.gone   { display:none; }
 
   /* ── Barra superior ── */
@@ -193,21 +195,21 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 18px 32px 0;
+    padding: 12px 32px 0;
     position: relative;
     flex-shrink: 0;
   }
   .sp-topbar-title {
-    font-size: clamp(22px, 3.5vw, 36px);
+    font-size: clamp(18px, 2.2vw, 26px);
     font-weight: 900;
     letter-spacing: -0.01em;
     text-align: center;
   }
   .sp-topbar-sub {
-    font-size: 13px;
+    font-size: 12px;
     color: #8b8b93;
     text-align: center;
-    margin-top: 2px;
+    margin-top: 1px;
     letter-spacing: 0.04em;
   }
   /* toggle Twitch (solo Twitch por ahora) */
@@ -247,11 +249,11 @@
   /* ── Layout principal 3 columnas ── */
   .sp-layout {
     display: grid;
-    grid-template-columns: 260px 1fr 240px;
-    gap: 14px;
+    grid-template-columns: 220px 1fr 200px;
+    gap: 12px;
     flex: 1;
     min-height: 0;
-    padding: 14px 20px 0;
+    padding: 10px 16px 0;
   }
   @media (max-width: 900px) {
     .sp-layout { grid-template-columns: 200px 1fr; }
@@ -489,21 +491,21 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
-    padding: 14px 20px 18px;
+    gap: 4px;
+    padding: 8px 20px 10px;
     flex-shrink: 0;
   }
   .sp-cta-btn {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     background: transparent;
     border: 1.5px solid #3a3a42;
     color: #fff;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 800;
     letter-spacing: 0.06em;
-    padding: 12px 36px;
+    padding: 8px 28px;
     border-radius: 999px;
     cursor: pointer;
     transition: border-color 0.2s, background 0.2s;
@@ -646,13 +648,7 @@
       <div class="sp-topbar-title">Partidas en <span style="color:#e8ff3d">Stream</span></div>
       <div class="sp-topbar-sub">Mira quién está en directo ahora.</div>
     </div>
-    <div class="sp-platform-toggle">
-      <span class="sp-ver-en">Ver en</span>
-      <div class="sp-twitch-btn">
-        <svg viewBox="0 0 24 24"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
-        TWITCH
-      </div>
-    </div>
+
   </div>
 
   <!-- Layout 3 columnas -->
@@ -661,7 +657,8 @@
     <!-- Panel izquierdo -->
     <div class="sp-left" id="spLeft">
       <div class="sp-stat-box">
-        <div class="sp-live-indicator"><div class="sp-live-dot"></div>EN DIRECTO</div>
+        <div class="sp-live-indicator" id="spLiveIndicator" style="display:none"><div class="sp-live-dot"></div>EN DIRECTO</div>
+        <div class="sp-offline-indicator" id="spOfflineIndicator" style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:#5c5c64;letter-spacing:0.1em;margin-bottom:6px;"><div style="width:7px;height:7px;background:#3a3a44;border-radius:50%;flex-shrink:0;"></div>OFFLINE</div>
         <div class="sp-viewers-count" id="spViewersCount">—</div>
         <div class="sp-viewers-label">espectadores</div>
       </div>
@@ -677,7 +674,7 @@
           <div class="sp-active-name" id="spActiveName">—</div>
           <div class="sp-active-status">
             <div class="sp-active-dot"></div>
-            <span>En directo · Twitch</span>
+            <span>En directo</span>
           </div>
         </div>
       </div>
@@ -1034,8 +1031,6 @@
 <!-- ===================== SPLASH SCREEN JS ===================== -->
 <script>
 (function() {
-  document.body.style.overflow = 'hidden';
-
   // ── Utilidades ────────────────────────────────────────────────
   function fmtViewers(n) {
     if (!n && n !== 0) return '—';
@@ -1052,12 +1047,25 @@
 
   // ── hideSplash ────────────────────────────────────────────────
   function hideSplash() {
-    document.body.style.overflow = '';
+    // scroll suavemente hacia abajo de la sección
     const splash = document.getElementById('splashScreen');
-    splash.classList.add('hiding');
-    setTimeout(() => splash.classList.add('gone'), 520);
+    const bottom = splash.offsetTop + splash.offsetHeight;
+    window.scrollTo({ top: bottom, behavior: 'smooth' });
   }
   window.hideSplash = hideSplash;
+
+  // ── updateLiveStatus ──────────────────────────────────────────
+  function updateLiveStatus(anyLive) {
+    const liveEl    = document.getElementById('spLiveIndicator');
+    const offlineEl = document.getElementById('spOfflineIndicator');
+    if (anyLive) {
+      liveEl.style.display    = 'flex';
+      offlineEl.style.display = 'none';
+    } else {
+      liveEl.style.display    = 'none';
+      offlineEl.style.display = 'flex';
+    }
+  }
 
   // ── checkLive: thumbnail trick ────────────────────────────────
   function checkLive(twitchName) {
@@ -1132,6 +1140,7 @@
     document.getElementById('spViewersCount').textContent   = fmtViewers(totalViewers);
     document.getElementById('spRightViewers').textContent   = fmtViewers(totalViewers);
     document.getElementById('spRightLiveCount').textContent = liveList.length;
+    updateLiveStatus(liveList.length > 0);
 
     list.innerHTML = allData.map((d, idx) => `
       <div class="sp-streamer-row${d.isLive && liveList[0] && d.streamer.twitchName===liveList[0].streamer.twitchName?' active-row':''}"
@@ -1187,6 +1196,7 @@
       showOfflineEmbed();
       document.getElementById('spViewersCount').textContent = '0';
       document.getElementById('spRightViewers').textContent = '—';
+      updateLiveStatus(false);
     }
   }
 
