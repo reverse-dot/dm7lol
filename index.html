@@ -149,7 +149,7 @@
     top: calc(100% + 8px);
     left: 50%;
     transform: translateX(-50%);
-    width: min(96vw, 860px);
+    width: min(96vw, 1200px);
     background: #101014;
     border: 1px solid #1f2024;
     border-radius: 20px;
@@ -158,6 +158,18 @@
     overflow: hidden;
   }
   #liveGamesPanel.open { display: block; }
+
+  /* Backdrop blur cuando el panel está abierto */
+  #liveGamesBackdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 8999;
+  }
+  #liveGamesBackdrop.open { display: block; }
 
   /* Badge "VS" entre los dos equipos */
   .vs-badge {
@@ -290,6 +302,9 @@
       </div>
       <span class="font-black text-lg tracking-tight text-white">SoloQ<span class="text-accent">Challenge</span></span>
     </a>
+
+    <!-- Backdrop blur para Live Games -->
+    <div id="liveGamesBackdrop"></div>
 
     <!-- Live Games nav button -->
     <div class="relative" id="liveGamesNavWrap">

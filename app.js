@@ -1519,7 +1519,7 @@ const LG = {
       return;
     }
 
-    grid.innerHTML = `<div class="space-y-3">
+    grid.innerHTML = `<div class="grid grid-cols-2 gap-3" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
       ${filtered.map(g => this.renderGameCard(g)).join("")}
     </div>`;
 
@@ -1585,13 +1585,15 @@ const LG = {
 
   /* ── Toggle del panel ───────────────────────────────────── */
   togglePanel() {
-    const panel = document.getElementById("liveGamesPanel");
-    const btn   = document.getElementById("liveGamesNavBtn");
-    const chevron = document.getElementById("liveNavChevron");
+    const panel    = document.getElementById("liveGamesPanel");
+    const backdrop = document.getElementById("liveGamesBackdrop");
+    const btn      = document.getElementById("liveGamesNavBtn");
+    const chevron  = document.getElementById("liveNavChevron");
     if (!panel) return;
 
     this.panelOpen = !this.panelOpen;
     panel.classList.toggle("open", this.panelOpen);
+    backdrop?.classList.toggle("open", this.panelOpen);
     btn?.setAttribute("aria-expanded", String(this.panelOpen));
 
     if (chevron) {
@@ -1610,10 +1612,12 @@ const LG = {
   closePanel() {
     if (!this.panelOpen) return;
     this.panelOpen = false;
-    const panel   = document.getElementById("liveGamesPanel");
-    const btn     = document.getElementById("liveGamesNavBtn");
-    const chevron = document.getElementById("liveNavChevron");
+    const panel    = document.getElementById("liveGamesPanel");
+    const backdrop = document.getElementById("liveGamesBackdrop");
+    const btn      = document.getElementById("liveGamesNavBtn");
+    const chevron  = document.getElementById("liveNavChevron");
     panel?.classList.remove("open");
+    backdrop?.classList.remove("open");
     btn?.setAttribute("aria-expanded", "false");
     if (chevron) chevron.style.transform = "";
     clearInterval(this.timerTickId);
