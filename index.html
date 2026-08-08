@@ -954,7 +954,7 @@
 <div id="toast"></div>
 
 <!-- ===================== MAIN CONTENT ===================== -->
-<div class="max-w-[1440px] mx-auto px-12 py-10 pb-20 max-md:px-4 max-md:py-6">
+<div id="ranking" class="max-w-[1440px] mx-auto px-12 py-10 pb-20 max-md:px-4 max-md:py-6">
 
   <!-- HEADER -->
   <div class="flex items-end justify-between flex-wrap gap-5 mb-8">
@@ -1051,12 +1051,17 @@
 
   // ── hideSplash ────────────────────────────────────────────────
   function hideSplash() {
-    // scroll suavemente hacia abajo de la sección
-    const splash = document.getElementById('splashScreen');
-    const bottom = splash.offsetTop + splash.offsetHeight;
-    window.scrollTo({ top: bottom, behavior: 'smooth' });
+  const ranking = document.getElementById('ranking');
+
+  if (ranking) {
+    ranking.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
   }
-  window.hideSplash = hideSplash;
+}
+
+window.hideSplash = hideSplash;
 
   // ── checkLive: thumbnail trick ────────────────────────────────
   function checkLive(twitchName) {
