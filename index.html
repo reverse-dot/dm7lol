@@ -1075,14 +1075,14 @@
   // ── checkLive: thumbnail trick ────────────────────────────────
   function checkLive(twitchName) {
     return new Promise(resolve => {
-      const url = `https://static-cdn.jtvnw.net/previews-ttv/live_user_${twitchName.toLowerCase()}-640x360.jpg?_=${Date.now()}`;
+      const url = `https://static-cdn.jtvnw.net/previews-ttv/live_user_${twitchName.toLowerCase()}-1280x720.jpg?_=${Date.now()}`;
       const img = new Image();
-      const timer = setTimeout(() => resolve({ isLive: false, thumbUrl: null }), 5000);
+      const timer = setTimeout(() => resolve({ isLive: false, thumbUrl: null }), 6000);
       img.onload = () => {
         clearTimeout(timer);
-        // Twitch sirve un placeholder de 1×1 o 0 bytes cuando offline;
-        // una preview real suele ser 640×360.
-        const live = img.naturalWidth > 100 && img.naturalHeight > 50;
+        // Twitch thumbnail offline: 404x272 placeholder. Live: 1280x720.
+        // Usamos un threshold alto para evitar falsos positivos.
+        const live = img.naturalWidth >= 1200 && img.naturalHeight >= 600;
         resolve({ isLive: live, thumbUrl: live ? url : null });
       };
       img.onerror = () => { clearTimeout(timer); resolve({ isLive: false, thumbUrl: null }); };
@@ -1194,12 +1194,23 @@
     // 3. Render lista derecha
     renderRightList(checks, liveList);
 
-    // 4. Embed + dots
+    // 4. Embed + dots — solo si hay alguien verificado como live
     if (liveList.length > 0) {
       renderDots(liveList);
       loadEmbed(liveList[0].streamer.twitchName);
     } else {
-      showOfflineEmbed();
+      // Mostrar embed del primer streamer sin indicar directo
+      if (streamers.length > 0) {
+        const wrap = document.getElementById('spEmbedWrap');
+        const parent = location.hostname || 'localhost';
+        wrap.innerHTML = `<iframe
+          src="https://player.twitch.tv/?channel=${encodeURIComponent(streamers[0].twitchName)}&parent=${parent}&autoplay=false&muted=true"
+          allowfullscreen
+          allow="autoplay; fullscreen"
+        ></iframe>`;
+      } else {
+        showOfflineEmbed();
+      }
       document.getElementById('spViewersCount').textContent = '—';
       document.getElementById('spRightViewers').textContent = '—';
       document.getElementById('spActiveInfo').style.display = 'none';
