@@ -171,6 +171,354 @@
   }
   #liveGamesBackdrop.open { display: block; }
 
+  /* ========== SPLASH SCREEN — diseño tipo broadcast ========== */
+  @keyframes bounceDown { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
+  @keyframes spin       { to{transform:rotate(360deg)} }
+
+  #splashScreen {
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+    display: flex;
+    flex-direction: column;
+    background: #0a0a0e;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    overflow: hidden;
+  }
+  #splashScreen.hiding { opacity:0; transform:translateY(-14px); pointer-events:none; }
+  #splashScreen.gone   { display:none; }
+
+  /* ── Barra superior ── */
+  .sp-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px 32px 0;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .sp-topbar-title {
+    font-size: clamp(22px, 3.5vw, 36px);
+    font-weight: 900;
+    letter-spacing: -0.01em;
+    text-align: center;
+  }
+  .sp-topbar-sub {
+    font-size: 13px;
+    color: #8b8b93;
+    text-align: center;
+    margin-top: 2px;
+    letter-spacing: 0.04em;
+  }
+  /* toggle Twitch (solo Twitch por ahora) */
+  .sp-platform-toggle {
+    position: absolute;
+    right: 32px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+  .sp-ver-en {
+    font-size: 10px;
+    color: #5c5c64;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .sp-twitch-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: #18181f;
+    border: 1.5px solid #9147ff;
+    color: #9147ff;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: default;
+    letter-spacing: 0.04em;
+  }
+  .sp-twitch-btn svg { width:14px; height:14px; fill:#9147ff; }
+
+  /* ── Layout principal 3 columnas ── */
+  .sp-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr 240px;
+    gap: 14px;
+    flex: 1;
+    min-height: 0;
+    padding: 14px 20px 0;
+  }
+  @media (max-width: 900px) {
+    .sp-layout { grid-template-columns: 200px 1fr; }
+    .sp-right   { display: none; }
+  }
+  @media (max-width: 600px) {
+    .sp-layout { grid-template-columns: 1fr; }
+    .sp-left   { display: none; }
+  }
+
+  /* ── Panel izquierdo ── */
+  .sp-left {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+  }
+  .sp-stat-box {
+    background: #101014;
+    border: 1px solid #1f2024;
+    border-radius: 14px;
+    padding: 16px 18px;
+  }
+  .sp-live-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #ef4444;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  .sp-live-dot {
+    width: 7px; height: 7px;
+    background: #ef4444;
+    border-radius: 50%;
+    animation: livePulse 1.4s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  .sp-viewers-count {
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+  .sp-viewers-label { font-size: 12px; color: #8b8b93; font-weight: 600; }
+  .sp-desc-box {
+    background: #101014;
+    border: 1px solid #1f2024;
+    border-radius: 14px;
+    padding: 16px 18px;
+    flex: 1;
+    overflow: hidden;
+  }
+  .sp-desc-name { font-size: 15px; font-weight: 800; margin-bottom: 6px; }
+  .sp-desc-text { font-size: 12px; color: #8b8b93; line-height: 1.6; margin-bottom: 14px; }
+  .sp-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 0.15s;
+    margin-bottom: 8px;
+    border: none;
+  }
+  .sp-btn:hover { opacity: 0.82; }
+  .sp-btn-accent { background: #e8ff3d; color: #0a0a0e; }
+  .sp-btn-outline { background: transparent; border: 1.5px solid #9147ff !important; color: #9147ff; }
+
+  /* streamer activo abajo del panel izq */
+  .sp-active-streamer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: auto;
+    background: #101014;
+    border: 1px solid #1f2024;
+    border-radius: 14px;
+    padding: 12px 14px;
+  }
+  .sp-active-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: #1f2024;
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .sp-active-avatar img { width:100%; height:100%; object-fit:cover; }
+  .sp-active-name { font-size: 14px; font-weight: 800; }
+  .sp-active-status {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: #8b8b93;
+  }
+  .sp-active-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #ef4444;
+    animation: livePulse 1.4s ease-in-out infinite;
+  }
+
+  /* ── Centro: embed del stream ── */
+  .sp-center {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+  }
+  .sp-embed-wrap {
+    flex: 1;
+    background: #000;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+    min-height: 0;
+  }
+  .sp-embed-wrap iframe {
+    width: 100%; height: 100%;
+    display: block;
+    border: none;
+  }
+  .sp-embed-placeholder {
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #5c5c64;
+    font-size: 13px;
+    font-weight: 600;
+    background: #0d0d11;
+  }
+  .sp-embed-placeholder-icon { font-size: 40px; opacity: 0.3; }
+  /* dots carousel */
+  .sp-dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding-bottom: 2px;
+  }
+  .sp-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #2a2a35;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .sp-dot.active { background: #e8ff3d; transform: scale(1.3); }
+
+  /* ── Panel derecho: lista streamers ── */
+  .sp-right {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .sp-right-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0 10px;
+    flex-shrink: 0;
+  }
+  .sp-right-title { font-size: 13px; font-weight: 800; color: #fff; }
+  .sp-right-counts {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 700;
+  }
+  .sp-right-viewers { display:flex; align-items:center; gap:4px; color:#8b8b93; }
+  .sp-right-live-count {
+    background:#ef4444; color:#fff;
+    font-size:11px; font-weight:900;
+    padding:2px 7px; border-radius:999px;
+  }
+  .sp-streamer-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    scrollbar-width: thin;
+    scrollbar-color: #2a2a35 transparent;
+  }
+  .sp-streamer-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .sp-streamer-row:hover { background: #101014; }
+  .sp-streamer-row.active-row { background: #101014; outline: 1px solid #e8ff3d33; }
+  .sp-row-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: #1f2024;
+    overflow: hidden; flex-shrink: 0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px;
+  }
+  .sp-row-avatar img { width:100%; height:100%; object-fit:cover; }
+  .sp-row-star { color: #2a2a35; font-size: 12px; flex-shrink:0; }
+  .sp-row-name { font-size: 13px; font-weight: 700; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sp-row-viewers { font-size: 12px; font-weight: 700; color: #8b8b93; flex-shrink:0; }
+  .sp-row-platform {
+    width: 18px; height: 18px;
+    border-radius: 4px;
+    background: #9147ff;
+    display: flex; align-items:center; justify-content:center;
+    flex-shrink: 0;
+  }
+  .sp-row-platform svg { width:10px; height:10px; fill:#fff; }
+  .sp-row-live-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .sp-row-live-dot.live   { background: #ef4444; animation: livePulse 1.4s ease-in-out infinite; }
+  .sp-row-live-dot.offline{ background: #2a2a35; }
+
+  /* ── Footer CTA ── */
+  .sp-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 20px 18px;
+    flex-shrink: 0;
+  }
+  .sp-cta-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    border: 1.5px solid #3a3a42;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    padding: 12px 36px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .sp-cta-btn:hover { border-color: #e8ff3d; background: rgba(232,255,61,0.06); }
+  .sp-cta-chevron { font-size: 16px; animation: bounceDown 1.6s ease-in-out infinite; }
+  .sp-spinner {
+    width:16px; height:16px;
+    border:2px solid #2a2a35;
+    border-top-color:#e8ff3d;
+    border-radius:50%;
+    animation:spin 0.8s linear infinite;
+    flex-shrink:0;
+  }
+
   /* Badge "VS" entre los dos equipos */
   .vs-badge {
     background: rgba(232,255,61,0.12);
@@ -289,6 +637,95 @@
   background-attachment: fixed;
   background-repeat: no-repeat;
 ">
+<!-- ===================== SPLASH SCREEN ===================== -->
+<div id="splashScreen">
+
+  <!-- Barra superior -->
+  <div class="sp-topbar">
+    <div>
+      <div class="sp-topbar-title">Partidas en <span style="color:#e8ff3d">Stream</span></div>
+      <div class="sp-topbar-sub">Mira quién está en directo ahora.</div>
+    </div>
+    <div class="sp-platform-toggle">
+      <span class="sp-ver-en">Ver en</span>
+      <div class="sp-twitch-btn">
+        <svg viewBox="0 0 24 24"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+        TWITCH
+      </div>
+    </div>
+  </div>
+
+  <!-- Layout 3 columnas -->
+  <div class="sp-layout">
+
+    <!-- Panel izquierdo -->
+    <div class="sp-left" id="spLeft">
+      <div class="sp-stat-box">
+        <div class="sp-live-indicator"><div class="sp-live-dot"></div>EN DIRECTO</div>
+        <div class="sp-viewers-count" id="spViewersCount">—</div>
+        <div class="sp-viewers-label">espectadores</div>
+      </div>
+      <div class="sp-desc-box">
+        <div class="sp-desc-name">SoloQChallenge</div>
+        <div class="sp-desc-text">Streamers de LoL compitiendo por subir elo en directo.</div>
+        <a href="javascript:void(0)" class="sp-btn sp-btn-accent" style="display:block;text-align:center;margin-bottom:8px;">Normas →</a>
+      </div>
+      <!-- streamer activo -->
+      <div class="sp-active-streamer" id="spActiveInfo" style="display:none">
+        <div class="sp-active-avatar" id="spActiveAvatar">📺</div>
+        <div>
+          <div class="sp-active-name" id="spActiveName">—</div>
+          <div class="sp-active-status">
+            <div class="sp-active-dot"></div>
+            <span>En directo · Twitch</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Centro: embed -->
+    <div class="sp-center">
+      <div class="sp-embed-wrap" id="spEmbedWrap">
+        <div class="sp-embed-placeholder">
+          <div class="sp-embed-placeholder-icon">📡</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="sp-spinner"></div>
+            Cargando stream…
+          </div>
+        </div>
+      </div>
+      <div class="sp-dots" id="spDots"></div>
+    </div>
+
+    <!-- Panel derecho: lista streamers -->
+    <div class="sp-right">
+      <div class="sp-right-header">
+        <span class="sp-right-title">En directo</span>
+        <div class="sp-right-counts">
+          <div class="sp-right-viewers">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8b8b93" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span id="spRightViewers">—</span>
+          </div>
+          <div class="sp-right-live-count" id="spRightLiveCount">0</div>
+        </div>
+      </div>
+      <div class="sp-streamer-list" id="spStreamerList">
+        <div style="color:#5c5c64;font-size:12px;padding:8px 10px;">Cargando…</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer CTA -->
+  <div class="sp-footer">
+    <button class="sp-cta-btn" onclick="hideSplash()">
+      VER RANKING
+      <span class="sp-cta-chevron">⌄</span>
+    </button>
+  </div>
+
+</div>
+
 <!-- Backdrop blur Live Games — fuera del nav para que cubra toda la página -->
 <div id="liveGamesBackdrop"></div>
 
@@ -593,6 +1030,173 @@
 <!-- Scripts externos -->
 <script src="config/firebase.js"></script>
 <script src="config/users.js"></script>
+
+<!-- ===================== SPLASH SCREEN JS ===================== -->
+<script>
+(function() {
+  document.body.style.overflow = 'hidden';
+
+  // ── Utilidades ────────────────────────────────────────────────
+  function fmtViewers(n) {
+    if (!n && n !== 0) return '—';
+    if (n >= 1000) return (n/1000).toFixed(1).replace(/\.0$/,'') + 'K';
+    return String(n);
+  }
+
+  const TWITCH_SVG = `<svg viewBox="0 0 24 24"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>`;
+
+  // ── Estado ────────────────────────────────────────────────────
+  let streamers = [];       // todos con twitchName
+  let liveData  = [];       // {streamer, isLive, viewers}
+  let currentIdx = 0;       // stream embebido activo
+
+  // ── hideSplash ────────────────────────────────────────────────
+  function hideSplash() {
+    document.body.style.overflow = '';
+    const splash = document.getElementById('splashScreen');
+    splash.classList.add('hiding');
+    setTimeout(() => splash.classList.add('gone'), 520);
+  }
+  window.hideSplash = hideSplash;
+
+  // ── checkLive: thumbnail trick ────────────────────────────────
+  function checkLive(twitchName) {
+    return new Promise(resolve => {
+      const url = `https://static-cdn.jtvnw.net/previews-ttv/live_user_${twitchName.toLowerCase()}-640x360.jpg?_=${Date.now()}`;
+      const img = new Image();
+      const timer = setTimeout(() => resolve({ isLive: false, thumbUrl: null }), 5000);
+      img.onload = () => {
+        clearTimeout(timer);
+        // Twitch sirve un placeholder de 1×1 o 0 bytes cuando offline;
+        // una preview real suele ser 640×360.
+        const live = img.naturalWidth > 100 && img.naturalHeight > 50;
+        resolve({ isLive: live, thumbUrl: live ? url : null });
+      };
+      img.onerror = () => { clearTimeout(timer); resolve({ isLive: false, thumbUrl: null }); };
+      img.src = url;
+    });
+  }
+
+  // ── Embed del stream activo ────────────────────────────────────
+  function loadEmbed(twitchName) {
+    const wrap = document.getElementById('spEmbedWrap');
+    // Twitch embed requiere que el parent coincida con el dominio real.
+    // En local (file://) no funcionará, pero en un servidor sí.
+    const parent = location.hostname || 'localhost';
+    wrap.innerHTML = `<iframe
+      src="https://player.twitch.tv/?channel=${encodeURIComponent(twitchName)}&parent=${parent}&autoplay=true&muted=false"
+      allowfullscreen
+      allow="autoplay; fullscreen"
+    ></iframe>`;
+
+    // Panel izquierdo: info del streamer activo
+    const s = streamers.find(x => x.twitchName === twitchName);
+    if (s) {
+      document.getElementById('spActiveName').textContent = s.riotId;
+      document.getElementById('spActiveInfo').style.display = 'flex';
+      document.getElementById('spActiveAvatar').textContent = s.riotId[0].toUpperCase();
+    }
+  }
+
+  function showOfflineEmbed() {
+    const wrap = document.getElementById('spEmbedWrap');
+    wrap.innerHTML = `<div class="sp-embed-placeholder">
+      <div class="sp-embed-placeholder-icon">📡</div>
+      <div>Ningún streamer en directo ahora mismo</div>
+    </div>`;
+  }
+
+  // ── Dots carousel ─────────────────────────────────────────────
+  function renderDots(liveList) {
+    const dotsEl = document.getElementById('spDots');
+    if (liveList.length <= 1) { dotsEl.innerHTML = ''; return; }
+    dotsEl.innerHTML = liveList.map((_, i) =>
+      `<div class="sp-dot ${i===0?'active':''}" data-i="${i}"></div>`
+    ).join('');
+    dotsEl.querySelectorAll('.sp-dot').forEach(d => {
+      d.addEventListener('click', () => switchTo(parseInt(d.dataset.i), liveList));
+    });
+  }
+
+  function switchTo(idx, liveList) {
+    currentIdx = idx;
+    document.querySelectorAll('.sp-dot').forEach((d,i) => d.classList.toggle('active', i===idx));
+    document.querySelectorAll('.sp-streamer-row').forEach(r => r.classList.toggle('active-row', r.dataset.twitch === liveList[idx].streamer.twitchName));
+    loadEmbed(liveList[idx].streamer.twitchName);
+  }
+
+  // ── Lista derecha ─────────────────────────────────────────────
+  function renderRightList(allData, liveList) {
+    const list = document.getElementById('spStreamerList');
+    const totalViewers = liveList.reduce((s,d) => s + (d.viewers||0), 0);
+    document.getElementById('spViewersCount').textContent   = fmtViewers(totalViewers);
+    document.getElementById('spRightViewers').textContent   = fmtViewers(totalViewers);
+    document.getElementById('spRightLiveCount').textContent = liveList.length;
+
+    list.innerHTML = allData.map((d, idx) => `
+      <div class="sp-streamer-row${d.isLive && liveList[0] && d.streamer.twitchName===liveList[0].streamer.twitchName?' active-row':''}"
+           data-twitch="${d.streamer.twitchName}"
+           onclick="${d.isLive ? `splashSelectStream('${d.streamer.twitchName}')` : `window.open('https://twitch.tv/${d.streamer.twitchName}','_blank')`}">
+        <div class="sp-row-avatar">${d.streamer.riotId[0].toUpperCase()}</div>
+        <span class="sp-row-star">☆</span>
+        <span class="sp-row-name">${d.streamer.riotId}</span>
+        ${d.isLive ? `<span class="sp-row-viewers">${fmtViewers(d.viewers||0)}</span>` : ''}
+        <div class="sp-row-platform">${TWITCH_SVG}</div>
+        <div class="sp-row-live-dot ${d.isLive?'live':'offline'}"></div>
+      </div>
+    `).join('');
+  }
+
+  window.splashSelectStream = function(twitchName) {
+    const liveList = liveData.filter(d => d.isLive);
+    const idx = liveList.findIndex(d => d.streamer.twitchName === twitchName);
+    if (idx >= 0) switchTo(idx, liveList);
+  };
+
+  // ── Bootstrap ─────────────────────────────────────────────────
+  async function loadSplash() {
+    // 1. Cargar accounts
+    try {
+      const r = await fetch('config/accounts.json');
+      const d = await r.json();
+      streamers = (d.accounts || []).filter(a => a.twitchName);
+    } catch(e) {
+      console.warn('Splash: no se pudo cargar accounts.json', e);
+    }
+
+    if (!streamers.length) { hideSplash(); return; }
+
+    // 2. Verificar live en paralelo
+    const checks = await Promise.all(streamers.map(async s => {
+      const { isLive, thumbUrl } = await checkLive(s.twitchName);
+      // viewers: no disponible sin API key; dejar en 0
+      return { streamer: s, isLive, thumbUrl, viewers: 0 };
+    }));
+
+    liveData = checks;
+    const liveList = checks.filter(d => d.isLive);
+
+    // 3. Render lista derecha
+    renderRightList(checks, liveList);
+
+    // 4. Embed + dots
+    if (liveList.length > 0) {
+      renderDots(liveList);
+      loadEmbed(liveList[0].streamer.twitchName);
+    } else {
+      showOfflineEmbed();
+      document.getElementById('spViewersCount').textContent = '0';
+      document.getElementById('spRightViewers').textContent = '—';
+    }
+  }
+
+  loadSplash();
+
+  // Escape cierra
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') hideSplash(); });
+})();
+</script>
+
 <script src="app.js"></script>
 </body>
 </html>
