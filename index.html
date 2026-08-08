@@ -180,7 +180,6 @@
     display: flex;
     flex-direction: column;
     transition: opacity 0.4s ease;
-    border-bottom: 1px solid #1f2024;
     overflow: hidden;
   }
   #splashScreen.hiding { opacity:0; pointer-events:none; }
@@ -1108,7 +1107,7 @@
     
 
     list.innerHTML = allData.map((d, idx) => `
-      <div class="sp-streamer-row flex py-4 px-4 items-center gap-1${d.isLive && liveList[0] && d.streamer.twitchName===liveList[0].streamer.twitchName?' active-row':''}"
+      <div class="sp-streamer-row flex py-2 px-4 items-center gap-1${d.isLive && liveList[0] && d.streamer.twitchName===liveList[0].streamer.twitchName?' active-row':''}"
            data-twitch="${d.streamer.twitchName}"
            onclick="${d.isLive ? `splashSelectStream('${d.streamer.twitchName}')` : `window.open('https://twitch.tv/${d.streamer.twitchName}','_blank')`}">
         <div class="sp-row-avatar">${d.streamer.riotId[0].toUpperCase()}</div>
