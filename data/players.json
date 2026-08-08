@@ -1,11 +1,11 @@
 {
-  "updatedAt": "2026-08-08T06:34:16.871Z",
+  "updatedAt": "2026-08-08T08:56:10.236Z",
   "tournamentEndsAt": "2026-08-19T07:30:32Z",
   "players": [
     {
       "rank": 1,
       "summonerName": "X1no",
-      "riotTag": "JNOGALES CORTI#SOL",
+      "riotTag": "Atsumu Miya",
       "avatar": "https://ddragon.leagueoflegends.com/cdn/14.15.1/img/profileicon/3889.png",
       "verified": true,
       "elo": "Emerald I",
@@ -39,17 +39,13 @@
       "role": "adc",
       "shells": [],
       "live": true,
-      "inGame": true,
-      "currentChampion": "Jinx",
-      "teamId": 100,
-      "gameId": "game_conflict_1",
-      "gameStartTime": 1754614200000,
+      "inGame": false,
       "opggUrl": "https://op.gg/summoners/na/Siler-SOL"
     },
     {
       "rank": 2,
       "summonerName": "Focus",
-      "riotTag": "eMonkeyz Run#514",
+      "riotTag": "Osamu Miya",
       "avatar": "https://ddragon.leagueoflegends.com/cdn/14.15.1/img/profileicon/6381.png",
       "verified": true,
       "elo": "Emerald IV",
@@ -83,17 +79,13 @@
       "role": "mid",
       "shells": [],
       "live": true,
-      "inGame": true,
-      "currentChampion": "Yasuo",
-      "teamId": 200,
-      "gameId": "game_conflict_1",
-      "gameStartTime": 1754614200000,
+      "inGame": false,
       "opggUrl": "https://op.gg/summoners/na/JavierLoL-514"
     },
     {
       "rank": 3,
       "summonerName": "zingCL",
-      "riotTag": "depredador ápice#6XX",
+      "riotTag": "Amarillo y weco",
       "avatar": "https://ddragon.leagueoflegends.com/cdn/14.15.1/img/profileicon/3512.png",
       "verified": true,
       "elo": "Emerald IV",
@@ -127,11 +119,7 @@
       "role": "top",
       "shells": [],
       "live": true,
-      "inGame": true,
-      "currentChampion": "Darius",
-      "teamId": 100,
-      "gameId": "game_solo_1",
-      "gameStartTime": 1754614600000,
+      "inGame": false,
       "opggUrl": "https://op.gg/summoners/na/sol1xd-6XX"
     }
   ]
