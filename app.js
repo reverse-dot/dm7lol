@@ -1653,9 +1653,18 @@ const LG = {
       this.load();
     });
 
-    // Click afuera cierra (usar click aquí está bien porque ya no hay conflicto)
+    // Click afuera o en el backdrop cierra el panel.
+    // El guard de 150ms evita que el mismo evento que abrió el panel lo cierre de inmediato.
+    let _openedAt = 0;
+    const _origToggle = this.togglePanel.bind(this);
+    this.togglePanel = () => { _openedAt = Date.now(); _origToggle(); };
+
     document.addEventListener("click", e => {
-      if (this.panelOpen && wrap && !wrap.contains(e.target)) {
+      if (Date.now() - _openedAt < 150) return;
+      const backdrop = document.getElementById("liveGamesBackdrop");
+      const clickedBackdrop = backdrop && backdrop.contains(e.target);
+      const clickedOutside = wrap && !wrap.contains(e.target);
+      if (this.panelOpen && (clickedOutside || clickedBackdrop)) {
         this.closePanel();
       }
     });
