@@ -181,9 +181,7 @@
     flex-direction: column;
     background: #0a0a0e;
     transition: opacity 0.4s ease;
-    height: 520px;
-    max-height: 58vh;
-    min-height: 360px;
+    height: calc(100vh - 64px);
     border-bottom: 1px solid #1f2024;
     overflow: hidden;
   }
@@ -198,6 +196,10 @@
     padding: 12px 32px 0;
     position: relative;
     flex-shrink: 0;
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
   }
   .sp-topbar-title {
     font-size: clamp(18px, 2.2vw, 26px);
@@ -254,6 +256,10 @@
     flex: 1;
     min-height: 0;
     padding: 10px 16px 0;
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
   }
   @media (max-width: 900px) {
     .sp-layout { grid-template-columns: 200px 1fr; }
@@ -639,90 +645,6 @@
   background-attachment: fixed;
   background-repeat: no-repeat;
 ">
-<!-- ===================== SPLASH SCREEN ===================== -->
-<div id="splashScreen">
-
-  <!-- Barra superior -->
-  <div class="sp-topbar">
-    <div>
-      <div class="sp-topbar-title">Partidas en <span style="color:#e8ff3d">Stream</span></div>
-      <div class="sp-topbar-sub">Mira quién está en directo ahora.</div>
-    </div>
-
-  </div>
-
-  <!-- Layout 3 columnas -->
-  <div class="sp-layout">
-
-    <!-- Panel izquierdo -->
-    <div class="sp-left" id="spLeft">
-      <div class="sp-stat-box">
-        <div class="sp-live-indicator" id="spLiveIndicator" style="display:none"><div class="sp-live-dot"></div>EN DIRECTO</div>
-        <div class="sp-offline-indicator" id="spOfflineIndicator" style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:#5c5c64;letter-spacing:0.1em;margin-bottom:6px;"><div style="width:7px;height:7px;background:#3a3a44;border-radius:50%;flex-shrink:0;"></div>OFFLINE</div>
-        <div class="sp-viewers-count" id="spViewersCount">—</div>
-        <div class="sp-viewers-label">espectadores</div>
-      </div>
-      <div class="sp-desc-box">
-        <div class="sp-desc-name">SoloQChallenge</div>
-        <div class="sp-desc-text">Streamers de LoL compitiendo por subir elo en directo.</div>
-        <a href="javascript:void(0)" class="sp-btn sp-btn-accent" style="display:block;text-align:center;margin-bottom:8px;">Normas →</a>
-      </div>
-      <!-- streamer activo -->
-      <div class="sp-active-streamer" id="spActiveInfo" style="display:none">
-        <div class="sp-active-avatar" id="spActiveAvatar">📺</div>
-        <div>
-          <div class="sp-active-name" id="spActiveName">—</div>
-          <div class="sp-active-status">
-            <div class="sp-active-dot"></div>
-            <span>En directo</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Centro: embed -->
-    <div class="sp-center">
-      <div class="sp-embed-wrap" id="spEmbedWrap">
-        <div class="sp-embed-placeholder">
-          <div class="sp-embed-placeholder-icon">📡</div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div class="sp-spinner"></div>
-            Cargando stream…
-          </div>
-        </div>
-      </div>
-      <div class="sp-dots" id="spDots"></div>
-    </div>
-
-    <!-- Panel derecho: lista streamers -->
-    <div class="sp-right">
-      <div class="sp-right-header">
-        <span class="sp-right-title">En directo</span>
-        <div class="sp-right-counts">
-          <div class="sp-right-viewers">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8b8b93" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
-            <span id="spRightViewers">—</span>
-          </div>
-          <div class="sp-right-live-count" id="spRightLiveCount">0</div>
-        </div>
-      </div>
-      <div class="sp-streamer-list" id="spStreamerList">
-        <div style="color:#5c5c64;font-size:12px;padding:8px 10px;">Cargando…</div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Footer CTA -->
-  <div class="sp-footer">
-    <button class="sp-cta-btn" onclick="hideSplash()">
-      VER RANKING
-      <span class="sp-cta-chevron">⌄</span>
-    </button>
-  </div>
-
-</div>
-
 <!-- Backdrop blur Live Games — fuera del nav para que cubra toda la página -->
 <div id="liveGamesBackdrop"></div>
 
@@ -833,6 +755,89 @@
     </div>
   </div>
 </nav>
+
+<!-- ===================== SPLASH SCREEN ===================== -->
+<div id="splashScreen">
+
+  <!-- Barra superior -->
+  <div class="sp-topbar">
+    <div>
+      <div class="sp-topbar-title">Partidas en <span style="color:#e8ff3d">Stream</span></div>
+      <div class="sp-topbar-sub">Mira quién está en directo ahora.</div>
+    </div>
+  </div>
+
+  <!-- Layout 3 columnas -->
+  <div class="sp-layout">
+
+    <!-- Panel izquierdo -->
+    <div class="sp-left" id="spLeft">
+      <div class="sp-stat-box">
+        <div class="sp-live-indicator" id="spLiveIndicator" style="display:none"><div class="sp-live-dot"></div>EN DIRECTO</div>
+        <div class="sp-offline-indicator" id="spOfflineIndicator" style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:#5c5c64;letter-spacing:0.1em;margin-bottom:6px;"><div style="width:7px;height:7px;background:#3a3a44;border-radius:50%;flex-shrink:0;"></div>OFFLINE</div>
+        <div class="sp-viewers-count" id="spViewersCount">—</div>
+        <div class="sp-viewers-label">espectadores</div>
+      </div>
+      <div class="sp-desc-box">
+        <div class="sp-desc-name">SoloQChallenge</div>
+        <div class="sp-desc-text">Streamers de LoL compitiendo por subir elo en directo.</div>
+        <a href="javascript:void(0)" class="sp-btn sp-btn-accent" style="display:block;text-align:center;margin-bottom:8px;">Normas →</a>
+      </div>
+      <!-- streamer activo -->
+      <div class="sp-active-streamer" id="spActiveInfo" style="display:none">
+        <div class="sp-active-avatar" id="spActiveAvatar">📺</div>
+        <div>
+          <div class="sp-active-name" id="spActiveName">—</div>
+          <div class="sp-active-status">
+            <div class="sp-active-dot"></div>
+            <span>En directo</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Centro: embed -->
+    <div class="sp-center">
+      <div class="sp-embed-wrap" id="spEmbedWrap">
+        <div class="sp-embed-placeholder">
+          <div class="sp-embed-placeholder-icon">📡</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="sp-spinner"></div>
+            Cargando stream…
+          </div>
+        </div>
+      </div>
+      <div class="sp-dots" id="spDots"></div>
+    </div>
+
+    <!-- Panel derecho: lista streamers -->
+    <div class="sp-right">
+      <div class="sp-right-header">
+        <span class="sp-right-title">En directo</span>
+        <div class="sp-right-counts">
+          <div class="sp-right-viewers">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8b8b93" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span id="spRightViewers">—</span>
+          </div>
+          <div class="sp-right-live-count" id="spRightLiveCount">0</div>
+        </div>
+      </div>
+      <div class="sp-streamer-list" id="spStreamerList">
+        <div style="color:#5c5c64;font-size:12px;padding:8px 10px;">Cargando…</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer CTA -->
+  <div class="sp-footer">
+    <button class="sp-cta-btn" onclick="hideSplash()">
+      VER RANKING
+      <span class="sp-cta-chevron">⌄</span>
+    </button>
+  </div>
+
+</div>
 
 <!-- ===================== MODAL LOGIN ===================== -->
 <div id="loginModal" class="modal-backdrop hidden">
