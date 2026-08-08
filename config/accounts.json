@@ -1,5 +1,5 @@
 {
-  "_comment": "Agrega o quita cuentas aqu\u00ed. 'riotId' y 'tagLine' son el Riot ID (ej: si tu invocador es Siler#SOL, riotId='Siler', tagLine='SOL'). 'region' es la regi\u00f3n de la cuenta (americas, europe, asia, sea). 'platform' es el servidor (na1, euw1, eun1, kr, la1, la2, br1, oc1, etc). 'displayTag' es lo que se muestra debajo del nombre en la web. 'role' es opcional: 'top', 'jungle', 'mid', 'adc' o 'support' (define qu\u00e9 \u00edcono de rol se muestra en la tabla, ver assets/roles/).",
+  "_comment": "Agrega o quita cuentas aquí. 'riotId' y 'tagLine' son el Riot ID (ej: si tu invocador es Siler#SOL, riotId='Siler', tagLine='SOL'). 'region' es la región de la cuenta (americas, europe, asia, sea). 'platform' es el servidor (na1, euw1, eun1, kr, la1, la2, br1, oc1, etc). 'displayTag' es lo que se muestra debajo del nombre en la web. 'role' es opcional: 'top', 'jungle', 'mid', 'adc' o 'support' (define qué ícono de rol se muestra en la tabla, ver assets/roles/). 'twitchName' es el nombre de usuario de Twitch del streamer (para la pantalla de inicio).",
   "tournamentEndsAt": "2026-08-19T07:30:32Z",
   "accounts": [
     {
@@ -9,6 +9,7 @@
       "platform": "la2",
       "displayTag": "eMonkeyz Run#514",
       "role": "mid",
+      "twitchName": "focuslol",
       "opggUrl": "https://op.gg/summoners/na/JavierLoL-514"
     },
     {
@@ -18,6 +19,7 @@
       "platform": "la2",
       "displayTag": "JNOGALES CORTI#SOL",
       "role": "adc",
+      "twitchName": "x1nolol",
       "opggUrl": "https://op.gg/summoners/na/Siler-SOL"
     },
     {
@@ -25,8 +27,9 @@
       "tagLine": "DM7",
       "region": "americas",
       "platform": "la2",
-      "displayTag": "depredador \u00e1pice#6XX",
+      "displayTag": "depredador ápice#6XX",
       "role": "top",
+      "twitchName": "zingcl",
       "opggUrl": "https://op.gg/summoners/na/sol1xd-6XX"
     }
   ]
