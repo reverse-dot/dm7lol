@@ -355,6 +355,8 @@ function authInit() {
   document.getElementById("btnUserMenu").addEventListener("click", e => {
     e.stopPropagation();
     document.getElementById("userMenuDropdown").classList.toggle("hidden");
+    // Cerrar Live Games panel si estaba abierto
+    if (typeof LG !== "undefined") LG.closePanel();
   });
   document.addEventListener("click", () => {
     document.getElementById("userMenuDropdown").classList.add("hidden");
@@ -1618,7 +1620,11 @@ const LG = {
   },
 
   /* ── Init ───────────────────────────────────────────────── */
+  _initialized: false,
   init() {
+    if (this._initialized) return;
+    this._initialized = true;
+
     const btn      = document.getElementById("liveGamesNavBtn");
     const refresh  = document.getElementById("liveGamesRefreshBtn");
     const wrap     = document.getElementById("liveGamesNavWrap");
@@ -1626,19 +1632,24 @@ const LG = {
 
     if (!btn) return;
 
-    // Abrir/cerrar panel
-    btn.addEventListener("click", e => {
+    // Usar mousedown en vez de click para que el toggle ocurra
+    // ANTES de que el bubbling llegue al listener de document (que usa click).
+    // Esto evita el race condition donde el panel se abre y se cierra
+    // en el mismo ciclo de eventos.
+    btn.addEventListener("mousedown", e => {
+      e.preventDefault(); // evita blur en inputs
       e.stopPropagation();
       this.togglePanel();
     });
 
     // Refresh manual
-    refresh?.addEventListener("click", e => {
+    refresh?.addEventListener("mousedown", e => {
+      e.preventDefault();
       e.stopPropagation();
       this.load();
     });
 
-    // Click afuera cierra
+    // Click afuera cierra (usar click aquí está bien porque ya no hay conflicto)
     document.addEventListener("click", e => {
       if (this.panelOpen && wrap && !wrap.contains(e.target)) {
         this.closePanel();
@@ -1671,15 +1682,29 @@ const LG = {
   },
 };
 
-// Iniciar después de que init() cargue los players
+// Iniciar Live Games después de que init() del ranking cargue los players.
+// Usamos un MutationObserver sobre el tableBody en vez de un setInterval,
+// para detectar el momento exacto en que los datos se renderizan sin riesgo
+// de llamar a LG.init() más de una vez.
 document.addEventListener("DOMContentLoaded", () => {
-  // Esperar a que los players estén cargados
-  const waitForPlayers = setInterval(() => {
+  const tryInit = () => {
     if (state.players && state.players.length > 0) {
-      clearInterval(waitForPlayers);
       LG.init();
+      return true;
     }
-  }, 200);
-  // Timeout fallback: igual iniciar aunque no haya players
-  setTimeout(() => { clearInterval(waitForPlayers); LG.init(); }, 4000);
+    return false;
+  };
+
+  // Intento inmediato (por si los datos ya cargaron)
+  if (!tryInit()) {
+    const observer = new MutationObserver(() => {
+      if (tryInit()) observer.disconnect();
+    });
+    const tableBody = document.getElementById("tableBody");
+    if (tableBody) {
+      observer.observe(tableBody, { childList: true });
+    }
+    // Fallback por si el tableBody no existe aún o no muta
+    setTimeout(() => { LG.init(); }, 5000);
+  }
 });
