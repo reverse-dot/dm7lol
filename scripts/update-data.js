@@ -61,6 +61,31 @@ function rankScore(p) {
   return (tierIdx + 1) * 100000 + divisionIdx * 10000 + (p.lp || 0);
 }
 
+// Cache de championId → nombre (se llena la primera vez que se necesita).
+// Así evitamos llamar al CDN de DD por cada jugador en partida.
+let championByIdCache = null;
+
+async function resolveChampionName(championId) {
+  if (!championId) return null;
+  if (!championByIdCache) {
+    try {
+      const res = await fetch(
+        `https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/data/es_ES/champion.json`
+      );
+      const json = await res.json();
+      // Construir mapa id → key (el "key" es el nombre que usa DD para las URLs de imágenes,
+      // ej. "LeeSin", "MissFortune"...).
+      championByIdCache = {};
+      for (const champ of Object.values(json.data)) {
+        championByIdCache[Number(champ.key)] = champ.id;
+      }
+    } catch {
+      return null;
+    }
+  }
+  return championByIdCache[Number(championId)] ?? null;
+}
+
 main().catch(err => {
   console.error("Fallo el update:", err);
   process.exit(1);
@@ -143,14 +168,39 @@ async function buildPlayer(account, previous) {
   }
 
   // 5) spectator-v5: ¿está en partida ahora mismo?
+  // Si está jugando, extraemos: gameId, gameStartTime, teamId y el campeón
+  // que está usando, para que el panel Live Games del navbar pueda mostrar
+  // la partida con todos sus datos sin necesidad de otra llamada en el cliente.
+  //
   // Riot está desactivando spectator-v5 para LoL (cambios de anonimato,
   // patch 25.20 en adelante), así que cualquier error acá -no solo el 404
   // normal de "no está jugando"- se trata simplemente como inGame:false
   // en vez de tirar abajo la actualización del jugador.
   let inGame = false;
+  let gameId = null;
+  let gameStartTime = null;
+  let teamId = null;
+  let currentChampion = null;
+
   try {
-    await riotFetch(`https://${platform}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${acc.puuid}`);
+    const spectator = await riotFetch(
+      `https://${platform}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${acc.puuid}`
+    );
+
     inGame = true;
+    gameId = String(spectator.gameId);
+    // gameStartTime viene en milisegundos UTC desde la época.
+    gameStartTime = spectator.gameStartTime ?? Date.now();
+
+    // Buscar al jugador por puuid dentro de la lista de participantes.
+    const me = (spectator.participants || []).find(p => p.puuid === acc.puuid);
+    if (me) {
+      teamId = me.teamId; // 100 = blue, 200 = red
+
+      // Resolver nombre del campeón a partir del championId usando el
+      // endpoint de Data Dragon (no requiere API key, es CDN público).
+      currentChampion = await resolveChampionName(me.championId);
+    }
   } catch {
     inGame = false;
   }
@@ -186,6 +236,15 @@ async function buildPlayer(account, previous) {
     shells: prevPlayer?.shells ?? [],
     live: prevPlayer?.live ?? false,
     inGame,
+    // Campos de partida en vivo — solo presentes cuando inGame === true.
+    // El panel Live Games del navbar los usa para agrupar jugadores en la
+    // misma card (gameId), mostrar el timer (gameStartTime) y el campeón.
+    ...(inGame && {
+      gameId,
+      gameStartTime,
+      teamId,
+      currentChampion,
+    }),
     opggUrl: opggUrl || `https://op.gg/summoners/${platform.replace(/\d+$/, "")}/${riotId}-${tagLine}`,
   };
 }
