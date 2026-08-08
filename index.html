@@ -1108,7 +1108,7 @@
     
 
     list.innerHTML = allData.map((d, idx) => `
-      <div class="sp-streamer-row${d.isLive && liveList[0] && d.streamer.twitchName===liveList[0].streamer.twitchName?' active-row':''}"
+      <div class="sp-streamer-row flex py-4 px-4 items-center gap-1${d.isLive && liveList[0] && d.streamer.twitchName===liveList[0].streamer.twitchName?' active-row':''}"
            data-twitch="${d.streamer.twitchName}"
            onclick="${d.isLive ? `splashSelectStream('${d.streamer.twitchName}')` : `window.open('https://twitch.tv/${d.streamer.twitchName}','_blank')`}">
         <div class="sp-row-avatar">${d.streamer.riotId[0].toUpperCase()}</div>
