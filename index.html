@@ -1142,8 +1142,9 @@
   function renderRightList(allData, liveList) {
     const list = document.getElementById('spStreamerList');
     const totalViewers = liveList.reduce((s,d) => s + (d.viewers||0), 0);
-    document.getElementById('spViewersCount').textContent   = fmtViewers(totalViewers);
-    document.getElementById('spRightViewers').textContent   = fmtViewers(totalViewers);
+    const viewersDisplay = liveList.length > 0 ? fmtViewers(totalViewers) : '—';
+    document.getElementById('spViewersCount').textContent   = viewersDisplay;
+    document.getElementById('spRightViewers').textContent   = viewersDisplay;
     document.getElementById('spRightLiveCount').textContent = liveList.length;
     updateLiveStatus(liveList.length > 0);
 
@@ -1199,8 +1200,9 @@
       loadEmbed(liveList[0].streamer.twitchName);
     } else {
       showOfflineEmbed();
-      document.getElementById('spViewersCount').textContent = '0';
+      document.getElementById('spViewersCount').textContent = '—';
       document.getElementById('spRightViewers').textContent = '—';
+      document.getElementById('spActiveInfo').style.display = 'none';
       updateLiveStatus(false);
     }
   }
