@@ -248,10 +248,10 @@
   }
   .sp-twitch-btn svg { width:14px; height:14px; fill:#9147ff; }
 
-  /* ── Layout principal 3 columnas ── */
+  /* ── Layout principal 2 columnas ── */
   .sp-layout {
     display: grid;
-    grid-template-columns: 220px 1fr 200px;
+    grid-template-columns: 1fr 200px;
     gap: 12px;
     flex: 1;
     min-height: 0;
@@ -262,12 +262,11 @@
     box-sizing: border-box;
   }
   @media (max-width: 900px) {
-    .sp-layout { grid-template-columns: 200px 1fr; }
-    .sp-right   { display: none; }
+    .sp-layout { grid-template-columns: 1fr 180px; }
   }
   @media (max-width: 600px) {
     .sp-layout { grid-template-columns: 1fr; }
-    .sp-left   { display: none; }
+    .sp-right   { display: none; }
   }
 
   /* ── Panel izquierdo ── */
@@ -767,34 +766,8 @@
     </div>
   </div>
 
-  <!-- Layout 3 columnas -->
+  <!-- Layout 2 columnas -->
   <div class="sp-layout">
-
-    <!-- Panel izquierdo -->
-    <div class="sp-left" id="spLeft">
-      <div class="sp-stat-box">
-        <div class="sp-live-indicator" id="spLiveIndicator" style="display:none"><div class="sp-live-dot"></div>EN DIRECTO</div>
-        <div class="sp-offline-indicator" id="spOfflineIndicator" style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:#5c5c64;letter-spacing:0.1em;margin-bottom:6px;"><div style="width:7px;height:7px;background:#3a3a44;border-radius:50%;flex-shrink:0;"></div>OFFLINE</div>
-        <div class="sp-viewers-count" id="spViewersCount">—</div>
-        <div class="sp-viewers-label">espectadores</div>
-      </div>
-      <div class="sp-desc-box">
-        <div class="sp-desc-name">SoloQChallenge</div>
-        <div class="sp-desc-text">Streamers de LoL compitiendo por subir elo en directo.</div>
-        <a href="javascript:void(0)" class="sp-btn sp-btn-accent" style="display:block;text-align:center;margin-bottom:8px;">Normas →</a>
-      </div>
-      <!-- streamer activo -->
-      <div class="sp-active-streamer" id="spActiveInfo" style="display:none">
-        <div class="sp-active-avatar" id="spActiveAvatar">📺</div>
-        <div>
-          <div class="sp-active-name" id="spActiveName">—</div>
-          <div class="sp-active-status">
-            <div class="sp-active-dot"></div>
-            <span>En directo</span>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Centro: embed -->
     <div class="sp-center">
