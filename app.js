@@ -11,15 +11,57 @@
   const PUNISHMENTS = [
   {
     id: 1,
+    icon: "assets/punishments/clown.webp",
+    name: "El Antiflash",
+    desc: "Tienes prohibido seleccionar el hechizo Destello (Flash)."
+  },
+  {
+    id: 2,
+    icon: "assets/punishments/silencio.webp",
+    name: "Banea2 de la Grieta",
+    desc: "Tienes baneados tus 3 campeones más jugados de la temporada"
+  },
+  {
+    id: 3,
+    icon: "assets/punishments/slow-motion.webp",
+    name: "Ruleta Rusa de Riot",
+    desc: "Jugar solo con objetos de movimiento, sin daño por 1 partida."
+  },
+  {
+    id: 4,
+    icon: "assets/punishments/mid-feed.webp",
+    name: "Sin Ganas de Vivir",
+    desc: " No puedes comprar ningún tipo de botas en toda la partida. Tampoco vale llevar la runa de Calzado Mágico."
+  },
+  {
+    id: 5,
+    icon: "assets/punishments/no-map.webp",
+    name: "Masoquista del Parche",
+    desc: "Busca en OP.GG o U.GG el campeón con el Winrate más bajo para jugarlo la próxima partida."
+  },
+  {
+    id: 6,
+    icon: "assets/punishments/support.webp",
+    name: "Pantalla de Microondas",
+    desc: "Entra a los ajustes visuales y reduce el mapa y la interfaz (HUD) al 0%."
+  },
+  {
+    id: 7,
+    icon: "assets/punishments/gastador.webp",
+    name: "El sin Vida",
+    desc: "Tienes estrictamente prohibido comprar pociones de vida, de reutilización o galletas al inicio y durante toda la partida."
+  },
+  {
+    id: 8,
     icon: "assets/punishments/pato.webp",
     name: "Runa Clasicarda",
     desc: "No puedes equiparte la runa clave principal de tu campeón."
   },
   {
-    id: 2,
+    id: 9,
     icon: "🔀",
     name: "Autofill",
-    desc: "Se sortea un campeón al azar. Debes jugar ese campeón en tu próxima partida.",
+    desc: "Se sortea un campeón al azar entre 25. Debes jugar ese campeón en tu próxima partida.",
     isChampionRoulette: true
   }
 ];
@@ -112,6 +154,7 @@ function initFirebase() {
 
 /* Cache local (fallback si Firebase no está configurado) */
 let localPunishments = {}; // { targetName: { punishment, senderName, sentAt } }
+let localHistory = [];     // [{ id, targetName, senderName, punishment, sentAt, completed, completedAt }]
 
 function isPunishmentEffective(r, now) {
   if (!r || !r.sentAt) return false;
@@ -149,10 +192,20 @@ async function loadPunishments() {
 }
 
 /* El castigo se guarda ya APLICADO: no requiere confirmación de nadie,
-   el que lo recibe está obligado a cumplirlo y el timer de 6h arranca ya. */
+   el que lo recibe está obligado a cumplirlo y el timer de 6h arranca ya.
+   Además de la copia "activa" (para el cooldown), se guarda un registro
+   histórico aparte que nunca se sobrescribe ni se borra con el reset, para
+   que cada jugador pueda ver su historial y marcar qué castigos ya cumplió. */
 async function savePunishment(targetName, senderName, punishment) {
-  const record = { punishment, senderName, sentAt: new Date() };
+  const sentAt = new Date();
+  const record = { punishment, senderName, sentAt };
   localPunishments[targetName] = record;
+  localHistory.unshift({
+    id: `local_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    targetName, senderName, punishment, sentAt,
+    completed: false, completedAt: null,
+  });
+
   if (!db) return;
   try {
     // Usa targetName como doc ID para que solo haya un castigo activo por persona.
@@ -160,11 +213,79 @@ async function savePunishment(targetName, senderName, punishment) {
     await db.collection("punishments").doc(targetName).set({
       targetName, senderName,
       punishment,
-      sentAt: firebase.firestore.Timestamp.fromDate(record.sentAt),
+      sentAt: firebase.firestore.Timestamp.fromDate(sentAt),
+    });
+    // Registro histórico independiente (colección aparte, un doc por castigo).
+    await db.collection("punishmentHistory").add({
+      targetName, senderName,
+      punishment,
+      sentAt: firebase.firestore.Timestamp.fromDate(sentAt),
+      completed: false,
+      completedAt: null,
     });
   } catch(e) {
     console.error("Error guardando castigo:", e);
     showToast("❌ No se pudo guardar el castigo. Intenta de nuevo.", true);
+  }
+}
+
+/* Historial completo de castigos recibidos por un jugador (no solo los
+   activos). Se ordena del más nuevo al más viejo en el cliente para evitar
+   tener que crear un índice compuesto en Firestore. */
+async function loadPunishmentHistory(targetName) {
+  if (!db) {
+    return localHistory
+      .filter(r => r.targetName === targetName)
+      .slice()
+      .sort((a, b) => b.sentAt - a.sentAt);
+  }
+  try {
+    const snap = await db.collection("punishmentHistory")
+      .where("targetName", "==", targetName)
+      .get();
+    const result = [];
+    snap.forEach(doc => {
+      const d = doc.data();
+      result.push({
+        id: doc.id,
+        targetName: d.targetName,
+        senderName: d.senderName,
+        punishment: d.punishment,
+        sentAt: d.sentAt ? d.sentAt.toDate() : new Date(),
+        completed: !!d.completed,
+        completedAt: d.completedAt ? d.completedAt.toDate() : null,
+      });
+    });
+    result.sort((a, b) => b.sentAt - a.sentAt);
+    return result;
+  } catch(e) {
+    console.error("Error cargando historial de castigos:", e);
+    return [];
+  }
+}
+
+/* Marca un castigo del historial como "cumplido" por el propio jugador.
+   Es solo para su control personal: NO toca la colección "punishments"
+   ni el timer de 6 horas, que sigue corriendo igual. */
+async function markPunishmentCompleted(historyId) {
+  const completedAt = new Date();
+
+  if (historyId.startsWith("local_")) {
+    const r = localHistory.find(h => h.id === historyId);
+    if (r) { r.completed = true; r.completedAt = completedAt; }
+    return true;
+  }
+  if (!db) return false;
+  try {
+    await db.collection("punishmentHistory").doc(historyId).update({
+      completed: true,
+      completedAt: firebase.firestore.Timestamp.fromDate(completedAt),
+    });
+    return true;
+  } catch(e) {
+    console.error("Error marcando castigo como cumplido:", e);
+    showToast("❌ No se pudo marcar como cumplido. Intenta de nuevo.", true);
+    return false;
   }
 }
 
@@ -272,6 +393,26 @@ function authInit() {
   // --- Botón de reset (solo visible para admin) ---
   document.getElementById("btnResetCastigos").addEventListener("click", doResetCastigos);
 
+  // --- Menú desplegable del usuario (nombre en el header) ---
+  document.getElementById("btnUserMenu").addEventListener("click", e => {
+    e.stopPropagation();
+    document.getElementById("userMenuDropdown").classList.toggle("hidden");
+  });
+  document.addEventListener("click", () => {
+    document.getElementById("userMenuDropdown").classList.add("hidden");
+  });
+  document.getElementById("userMenuDropdown").addEventListener("click", e => e.stopPropagation());
+
+  // --- Historial de castigos del propio jugador ---
+  document.getElementById("btnOpenHistory").addEventListener("click", () => {
+    document.getElementById("userMenuDropdown").classList.add("hidden");
+    openPunishmentHistory();
+  });
+  document.getElementById("btnCloseHistory").addEventListener("click", () => closeModal("punishHistoryModal"));
+  document.getElementById("punishHistoryModal").addEventListener("click", e => {
+    if (e.target === e.currentTarget) closeModal("punishHistoryModal");
+  });
+
   // Restaurar sesión de ADMIN si Firebase Auth ya tiene una sesión activa
   // (Firebase Auth persiste la sesión sola, por eso no usamos sessionStorage acá)
   if (auth) {
@@ -354,6 +495,7 @@ async function doAdminLogin() {
 }
 
 function logout() {
+  document.getElementById("userMenuDropdown").classList.add("hidden");
   const wasAdmin = currentUser && currentUser.isAdmin;
   currentUser = null;
   sessionStorage.removeItem("sq_user");
@@ -381,6 +523,7 @@ function updateAuthUI() {
 }
 
 async function doResetCastigos() {
+  document.getElementById("userMenuDropdown").classList.add("hidden");
   if (!currentUser || !currentUser.isAdmin) return;
   const ok = window.confirm("¿Seguro que querés borrar TODOS los castigos activos de todos los jugadores? Esta acción no se puede deshacer.");
   if (!ok) return;
@@ -417,8 +560,95 @@ async function updateNavCooldown() {
 }
 
 /* ============================================================
-   MODAL CASTIGO
+   HISTORIAL DE CASTIGOS (por jugador)
+   Muestra TODOS los castigos que recibió el usuario logueado, incluso
+   los que ya expiraron. Cada uno se puede marcar como "cumplido" a modo
+   de check personal — eso NO reinicia ni cancela las 6 horas de espera,
+   que se manejan aparte en la colección "punishments".
    ============================================================ */
+function fmtDateTime(d) {
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm} ${hh}:${mi}hs`;
+}
+
+async function openPunishmentHistory() {
+  if (!currentUser || currentUser.isAdmin) return;
+  openModal("punishHistoryModal");
+
+  const listEl  = document.getElementById("punishHistoryList");
+  const emptyEl = document.getElementById("punishHistoryEmpty");
+  listEl.innerHTML = `<div class="text-center text-text-dim text-sm py-10">Cargando…</div>`;
+  emptyEl.classList.add("hidden");
+
+  const history = await loadPunishmentHistory(currentUser.player);
+  renderPunishmentHistory(history);
+}
+
+function renderPunishmentHistory(history) {
+  const listEl  = document.getElementById("punishHistoryList");
+  const emptyEl = document.getElementById("punishHistoryEmpty");
+
+  if (!history.length) {
+    listEl.innerHTML = "";
+    emptyEl.classList.remove("hidden");
+    return;
+  }
+  emptyEl.classList.add("hidden");
+
+  const now = Date.now();
+  listEl.innerHTML = history.map(r => {
+    const p = r.punishment;
+    const champion = p.champion;
+    const icon = champion
+      ? `<img src="${champIconUrl(champion.id)}" alt="${champion.name}" class="w-9 h-9 rounded-md object-cover border border-accent flex-shrink-0">`
+      : `<span class="text-2xl flex-shrink-0">${p.icon}</span>`;
+    const label = champion ? `Autofill: ${champion.name}` : p.name;
+
+    const stillActive = (now - r.sentAt.getTime()) < COOLDOWN_MS;
+    const statusChip = stillActive
+      ? `<span class="cooldown-pill">⏳ Activo</span>`
+      : `<span class="text-text-dimmer text-[11px] font-bold">Expirado</span>`;
+
+    const doneChip = r.completed
+      ? `<span class="flex items-center gap-1 text-win text-[12px] font-bold">✅ Cumplido${r.completedAt ? ` · ${fmtDateTime(r.completedAt)}` : ""}</span>`
+      : `<button data-history-id="${r.id}" class="btnMarkDone bg-accent/10 border border-accent/30 text-accent text-[12px] font-bold px-3 py-1.5 rounded-lg hover:bg-accent/20 transition-colors">Marcar como cumplido</button>`;
+
+    return `
+    <div class="bg-bg border border-panel-border rounded-xl p-3.5 flex items-start gap-3">
+      ${icon}
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-extrabold text-[13px] text-white truncate">${label}</span>
+          ${statusChip}
+        </div>
+        <p class="text-text-dim text-[12px] mt-0.5">Enviado por <span class="text-accent font-bold">${r.senderName}</span> · ${fmtDateTime(r.sentAt)}</p>
+        <div class="mt-2">${doneChip}</div>
+      </div>
+    </div>`;
+  }).join("");
+
+  // Delegación de eventos para los botones "Marcar como cumplido"
+  listEl.querySelectorAll(".btnMarkDone").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      btn.textContent = "Guardando…";
+      const id = btn.getAttribute("data-history-id");
+      const ok = await markPunishmentCompleted(id);
+      if (ok) {
+        const history = await loadPunishmentHistory(currentUser.player);
+        renderPunishmentHistory(history);
+      } else {
+        btn.disabled = false;
+        btn.textContent = "Marcar como cumplido";
+      }
+    });
+  });
+}
+
+
 let punishTarget = null;
 let selectedPunishment = null;
 let activePunishments  = {};
@@ -501,7 +731,7 @@ function runRouletteAnimation() {
   const descEl = document.getElementById("punishResultDesc");
   descEl.textContent = "Sorteando entre todos los castigos…";
 
-  const TOTAL_MS = 10000;
+  const TOTAL_MS = 5000;
   const start = Date.now();
 
   function spin() {
@@ -515,8 +745,8 @@ function runRouletteAnimation() {
       return;
     }
     // Se va frenando hacia el final, como una ruleta real.
-    const delay = elapsed > TOTAL_MS - 2500 ? 200
-                : elapsed > TOTAL_MS - 5000 ? 120
+    const delay = elapsed > TOTAL_MS - 1250 ? 200
+                : elapsed > TOTAL_MS - 2500 ? 120
                 : 70;
     punishRouletteTimer = setTimeout(spin, delay);
   }
@@ -739,7 +969,7 @@ function renderPunishmentCell(player) {
       <div class="flex items-center gap-1.5">
         ${chipIcon}
         <div class="cooldown-pill">
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
           ${timeStr}
         </div>
       </div>
