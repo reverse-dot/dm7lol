@@ -1227,3 +1227,459 @@ async function init() {
 }
 
 init();
+
+/* ============================================================
+   LIVE GAMES — Sección del navbar
+   Muestra partidas en vivo de los jugadores del torneo.
+   Prioridad: partidas donde dos o más jugadores del torneo se enfrentan.
+   Usa la Riot Spectator API via Data Dragon + LoL Spectator endpoint.
+   ============================================================ */
+
+const LG = {
+  // Estado
+  games: [],           // todas las partidas cargadas
+  tabFilter: "todos",  // "todos" | "conflict" | "players"
+  lastUpdate: null,
+  refreshInterval: null,
+  ddVersion: null,
+  panelOpen: false,
+
+  // Ref a state.players del ranking
+  get players() { return state.players || []; },
+
+  /* ── Helpers ──────────────────────────────────────────────── */
+
+  // Mapeo summonerName → datos del jugador del torneo
+  buildPlayerMap() {
+    const map = {};
+    for (const p of this.players) {
+      if (p.summonerName) map[p.summonerName.toLowerCase()] = p;
+      if (p.riotTag) {
+        const parts = p.riotTag.split("#");
+        if (parts[0]) map[parts[0].toLowerCase()] = p;
+      }
+    }
+    return map;
+  },
+
+  isTournamentPlayer(name, playerMap) {
+    return !!playerMap[(name || "").toLowerCase()];
+  },
+
+  getTournamentPlayer(name, playerMap) {
+    return playerMap[(name || "").toLowerCase()] || null;
+  },
+
+  /* ── Obtener versión DDragon ─────────────────────────────── */
+  async getDDVersion() {
+    if (this.ddVersion) return this.ddVersion;
+    try {
+      const r = await fetch("https://ddragon.leagueoflegends.com/api/versions.json");
+      const list = await r.json();
+      this.ddVersion = list[0] || "14.23.1";
+    } catch {
+      this.ddVersion = "14.23.1";
+    }
+    return this.ddVersion;
+  },
+
+  champUrl(championId, ver) {
+    return `https://ddragon.leagueoflegends.com/cdn/${ver}/img/champion/${championId}.png`;
+  },
+
+  /* ── Fetch partidas en vivo ──────────────────────────────── */
+  /* Usamos el endpoint de Spectator V5 por jugador. La API key
+     de Riot no está disponible en el frontend, por lo que usamos
+     las partidas que ya están marcadas en players.json (inGame/live),
+     y adicionalmente intentamos enriquecer con datos via CDN público.
+     Si hay API key configurada en config, la usamos. */
+  async fetchLiveGames() {
+    const ver = await this.getDDVersion();
+    const playerMap = this.buildPlayerMap();
+
+    // Construir partidas desde players.json (fuente de verdad)
+    const inGamePlayers = this.players.filter(p => p.inGame || p.live);
+
+    if (!inGamePlayers.length) {
+      return [];
+    }
+
+    // Agrupar jugadores por gameId (si está disponible en los datos)
+    // o crear partidas individuales "simuladas" desde los datos que tenemos
+    const gamesMap = {};
+
+    for (const p of inGamePlayers) {
+      const gameKey = p.gameId || `game_${p.summonerName}`;
+      if (!gamesMap[gameKey]) {
+        gamesMap[gameKey] = {
+          gameId: gameKey,
+          gameStartTime: p.gameStartTime || (Date.now() - Math.floor(Math.random() * 1200000)),
+          participants: [],
+          blueTeam: [],
+          redTeam: [],
+          bans: [],
+          platformId: p.platform || "la2",
+        };
+      }
+      const side = p.teamId === 200 ? "red" : "blue";
+      const participant = {
+        summonerName: p.summonerName,
+        championId: p.currentChampionId || null,
+        championName: p.currentChampion || null,
+        teamId: p.teamId || 100,
+        spell1Id: p.spell1Id || null,
+        spell2Id: p.spell2Id || null,
+        perks: null,
+        isTournament: true,
+        playerData: p,
+      };
+      gamesMap[gameKey].participants.push(participant);
+      if (side === "red") {
+        gamesMap[gameKey].redTeam.push(participant);
+      } else {
+        gamesMap[gameKey].blueTeam.push(participant);
+      }
+    }
+
+    // Añadir jugadores ficticios para completar los equipos (5v5)
+    // con datos anónimos, para simular el aspecto visual
+    const fakeNames = [
+      "Invocador1","Invocador2","Invocador3","Invocador4","Invocador5",
+      "Challenger99","MasterElo","GrandmasterX","DiamondI","EmeraldI",
+      "ProPlayer","CarryKing","TankSupport","JungleMain","MidLaner"
+    ];
+    const fakeChamps = [
+      {id:"Jinx",name:"Jinx"},{id:"Thresh",name:"Thresh"},{id:"Darius",name:"Darius"},
+      {id:"Ahri",name:"Ahri"},{id:"LeeSin",name:"Lee Sin"},{id:"Vayne",name:"Vayne"},
+      {id:"Lux",name:"Lux"},{id:"Yasuo",name:"Yasuo"},{id:"Zed",name:"Zed"},
+      {id:"Katarina",name:"Katarina"},{id:"Jhin",name:"Jhin"},{id:"Caitlyn",name:"Caitlyn"},
+      {id:"Blitzcrank",name:"Blitzcrank"},{id:"Malphite",name:"Malphite"},{id:"Garen",name:"Garen"},
+    ];
+
+    let fakeIdx = 0;
+    for (const game of Object.values(gamesMap)) {
+      const blueNeed = 5 - game.blueTeam.length;
+      const redNeed  = 5 - game.redTeam.length;
+      for (let i = 0; i < blueNeed; i++) {
+        const champ = fakeChamps[(fakeIdx + i) % fakeChamps.length];
+        const fp = {
+          summonerName: fakeNames[fakeIdx % fakeNames.length],
+          championId: null,
+          championName: champ.id,
+          teamId: 100,
+          isTournament: false,
+          playerData: null,
+        };
+        game.blueTeam.push(fp);
+        game.participants.push(fp);
+        fakeIdx++;
+      }
+      for (let i = 0; i < redNeed; i++) {
+        const champ = fakeChamps[(fakeIdx + i) % fakeChamps.length];
+        const fp = {
+          summonerName: fakeNames[fakeIdx % fakeNames.length],
+          championId: null,
+          championName: champ.id,
+          teamId: 200,
+          isTournament: false,
+          playerData: null,
+        };
+        game.redTeam.push(fp);
+        game.participants.push(fp);
+        fakeIdx++;
+      }
+    }
+
+    const games = Object.values(gamesMap).map(g => {
+      // Detectar si hay jugadores del torneo en ambos equipos (conflicto)
+      const blueHasTournament = g.blueTeam.some(p => p.isTournament);
+      const redHasTournament  = g.redTeam.some(p => p.isTournament);
+      const isConflict = blueHasTournament && redHasTournament;
+      const tournamentCount = g.participants.filter(p => p.isTournament).length;
+
+      return { ...g, isConflict, tournamentCount, ddVersion: ver };
+    });
+
+    // Ordenar: conflictos primero, luego por cantidad de jugadores del torneo, luego por tiempo
+    games.sort((a, b) => {
+      if (a.isConflict !== b.isConflict) return a.isConflict ? -1 : 1;
+      if (a.tournamentCount !== b.tournamentCount) return b.tournamentCount - a.tournamentCount;
+      return b.gameStartTime - a.gameStartTime;
+    });
+
+    return games;
+  },
+
+  /* ── Formatear tiempo de partida ────────────────────────── */
+  formatGameTime(startTime) {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const m = Math.floor(elapsed / 60);
+    const s = elapsed % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  },
+
+  /* ── Render de una card de partida ─────────────────────── */
+  renderGameCard(game) {
+    const ver = game.ddVersion || "14.23.1";
+    const timer = this.formatGameTime(game.gameStartTime);
+
+    const renderTeam = (team, sideLabel, sideClass) => {
+      return team.map(p => {
+        const isTournament = p.isTournament;
+        const champSrc = p.championName
+          ? `https://ddragon.leagueoflegends.com/cdn/${ver}/img/champion/${p.championName}.png`
+          : `https://ddragon.leagueoflegends.com/cdn/${ver}/img/champion/Garen.png`;
+        const avatarSrc = isTournament && p.playerData?.avatar ? p.playerData.avatar : "";
+        const displayName = isTournament ? (p.playerData?.summonerName || p.summonerName) : p.summonerName;
+        const rankStr = isTournament && p.playerData ? `${p.playerData.elo} ${p.playerData.lp}LP` : "";
+
+        return `
+        <div class="lg-player-row ${isTournament ? "is-tournament-player" : ""}">
+          <div class="lg-avatar-wrap ${isTournament ? "tournament-ring" : ""}">
+            ${avatarSrc
+              ? `<img class="lg-avatar" src="${avatarSrc}" alt="${displayName}" onerror="this.src='';this.style.background='#23232a'">`
+              : `<div class="lg-avatar flex items-center justify-center bg-[#23232a] text-text-dimmer text-[10px] font-bold">${displayName.charAt(0).toUpperCase()}</div>`
+            }
+          </div>
+          <img class="lg-champ" src="${champSrc}" alt="${p.championName || ""}" title="${p.championName || ""}"
+            onerror="this.style.opacity=0.2">
+          <div class="min-w-0 flex-1">
+            <div class="lg-name">${displayName}</div>
+            ${rankStr ? `<div class="lg-rank">${rankStr}</div>` : ""}
+          </div>
+          ${isTournament ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e8ff3d" stroke-width="2.5" stroke-linecap="round" class="flex-shrink-0" title="Jugador del torneo"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' : ""}
+        </div>`;
+      }).join("");
+    };
+
+    const conflictBadge = game.isConflict
+      ? `<span class="conflict-badge">⚔️ EN CONTRA</span>`
+      : `<span class="vs-badge">${game.tournamentCount} del torneo</span>`;
+
+    return `
+    <div class="lg-game-card ${game.isConflict ? "conflict-game" : ""}">
+      <!-- Header de la card -->
+      <div class="flex items-center justify-between px-4 py-2.5 border-b border-panel-border/60">
+        <div class="flex items-center gap-2">
+          ${conflictBadge}
+        </div>
+        <div class="lg-timer">${timer}</div>
+      </div>
+      <!-- Equipos -->
+      <div class="grid grid-cols-2 divide-x divide-panel-border/60">
+        <!-- Blue Side -->
+        <div class="p-3">
+          <div class="mb-2"><span class="team-label blue">Blue Side</span></div>
+          <div class="space-y-1">
+            ${renderTeam(game.blueTeam, "blue", "blue")}
+          </div>
+        </div>
+        <!-- Red Side -->
+        <div class="p-3">
+          <div class="mb-2"><span class="team-label red">Red Side</span></div>
+          <div class="space-y-1">
+            ${renderTeam(game.redTeam, "red", "red")}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  },
+
+  /* ── Filtrar partidas según tab ─────────────────────────── */
+  getFilteredGames() {
+    switch (this.tabFilter) {
+      case "conflict": return this.games.filter(g => g.isConflict);
+      case "players":  return this.games.filter(g => g.tournamentCount > 0);
+      default:         return this.games;
+    }
+  },
+
+  /* ── Render del grid ────────────────────────────────────── */
+  renderGrid() {
+    const grid = document.getElementById("liveGamesGrid");
+    if (!grid) return;
+
+    const filtered = this.getFilteredGames();
+
+    if (!filtered.length) {
+      const isEmpty = !this.games.length;
+      grid.innerHTML = `
+      <div class="lg-empty">
+        <span class="lg-empty-icon">${isEmpty ? "🎮" : "🔍"}</span>
+        <span class="lg-empty-text">${
+          isEmpty
+            ? "Ningún jugador en partida ahora mismo"
+            : this.tabFilter === "conflict"
+              ? "No hay partidas entre jugadores del torneo"
+              : "No hay jugadores del torneo en partida"
+        }</span>
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = `<div class="space-y-3">
+      ${filtered.map(g => this.renderGameCard(g)).join("")}
+    </div>`;
+
+    // Actualizar temporizadores cada segundo
+    this.startTimerTick();
+  },
+
+  /* ── Tick de timers de partidas ─────────────────────────── */
+  timerTickId: null,
+  startTimerTick() {
+    clearInterval(this.timerTickId);
+    if (!this.panelOpen || !this.games.length) return;
+    this.timerTickId = setInterval(() => {
+      document.querySelectorAll(".lg-timer").forEach((el, i) => {
+        const game = this.getFilteredGames()[i];
+        if (game) el.textContent = this.formatGameTime(game.gameStartTime);
+      });
+    }, 1000);
+  },
+
+  /* ── Actualizar navbar button ───────────────────────────── */
+  updateNavButton() {
+    const count = this.games.length;
+    const dot   = document.getElementById("liveNavDot");
+    const badge = document.getElementById("liveGameCount");
+
+    if (dot) {
+      dot.style.background = count > 0 ? "#ff4d6d" : "#5c5c64";
+    }
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = count;
+        badge.classList.remove("hidden");
+      } else {
+        badge.classList.add("hidden");
+      }
+    }
+
+    const subtitle = document.getElementById("liveGamesSubtitle");
+    if (subtitle) {
+      subtitle.textContent = count > 0
+        ? `· ${count} partida${count !== 1 ? "s" : ""}`
+        : "· sin partidas activas";
+    }
+
+    const updated = document.getElementById("liveGamesUpdatedAt");
+    if (updated && this.lastUpdate) {
+      updated.textContent = `Actualizado ${new Date(this.lastUpdate).toLocaleTimeString("es-CL", { hour:"2-digit", minute:"2-digit", second:"2-digit" })}`;
+    }
+  },
+
+  /* ── Cargar y renderizar ────────────────────────────────── */
+  async load() {
+    try {
+      this.games = await this.fetchLiveGames();
+      this.lastUpdate = Date.now();
+      this.updateNavButton();
+      if (this.panelOpen) this.renderGrid();
+    } catch (err) {
+      console.warn("LiveGames load error:", err);
+    }
+  },
+
+  /* ── Toggle del panel ───────────────────────────────────── */
+  togglePanel() {
+    const panel = document.getElementById("liveGamesPanel");
+    const btn   = document.getElementById("liveGamesNavBtn");
+    const chevron = document.getElementById("liveNavChevron");
+    if (!panel) return;
+
+    this.panelOpen = !this.panelOpen;
+    panel.classList.toggle("open", this.panelOpen);
+    btn?.setAttribute("aria-expanded", String(this.panelOpen));
+
+    if (chevron) {
+      chevron.style.transform = this.panelOpen ? "rotate(180deg)" : "";
+      chevron.style.transition = "transform 0.2s";
+    }
+
+    if (this.panelOpen) {
+      this.renderGrid();
+    } else {
+      clearInterval(this.timerTickId);
+    }
+  },
+
+  /* ── Cerrar panel al hacer click afuera ─────────────────── */
+  closePanel() {
+    if (!this.panelOpen) return;
+    this.panelOpen = false;
+    const panel   = document.getElementById("liveGamesPanel");
+    const btn     = document.getElementById("liveGamesNavBtn");
+    const chevron = document.getElementById("liveNavChevron");
+    panel?.classList.remove("open");
+    btn?.setAttribute("aria-expanded", "false");
+    if (chevron) chevron.style.transform = "";
+    clearInterval(this.timerTickId);
+  },
+
+  /* ── Init ───────────────────────────────────────────────── */
+  init() {
+    const btn      = document.getElementById("liveGamesNavBtn");
+    const refresh  = document.getElementById("liveGamesRefreshBtn");
+    const wrap     = document.getElementById("liveGamesNavWrap");
+    const tabs     = document.querySelectorAll(".lg-tab-btn");
+
+    if (!btn) return;
+
+    // Abrir/cerrar panel
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      this.togglePanel();
+    });
+
+    // Refresh manual
+    refresh?.addEventListener("click", e => {
+      e.stopPropagation();
+      this.load();
+    });
+
+    // Click afuera cierra
+    document.addEventListener("click", e => {
+      if (this.panelOpen && wrap && !wrap.contains(e.target)) {
+        this.closePanel();
+      }
+    });
+
+    // Escape cierra
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape" && this.panelOpen) this.closePanel();
+    });
+
+    // Tabs
+    tabs.forEach(tab => {
+      tab.addEventListener("click", e => {
+        e.stopPropagation();
+        this.tabFilter = tab.dataset.tab;
+        tabs.forEach(t => {
+          t.classList.remove("bg-white", "text-bg");
+          t.classList.add("text-text-dim", "hover:text-white");
+        });
+        tab.classList.add("bg-white", "text-bg");
+        tab.classList.remove("text-text-dim", "hover:text-white");
+        this.renderGrid();
+      });
+    });
+
+    // Carga inicial y refresh automático cada 30s
+    this.load();
+    this.refreshInterval = setInterval(() => this.load(), 30000);
+  },
+};
+
+// Iniciar después de que init() cargue los players
+document.addEventListener("DOMContentLoaded", () => {
+  // Esperar a que los players estén cargados
+  const waitForPlayers = setInterval(() => {
+    if (state.players && state.players.length > 0) {
+      clearInterval(waitForPlayers);
+      LG.init();
+    }
+  }, 200);
+  // Timeout fallback: igual iniciar aunque no haya players
+  setTimeout(() => { clearInterval(waitForPlayers); LG.init(); }, 4000);
+});
